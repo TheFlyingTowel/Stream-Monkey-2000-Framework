@@ -12,7 +12,16 @@ namespace SM2K
 	
 	void Update_Scheduler(_Registry& REGISTRY, _Entity e) 
 	{
+		if(ANY(e, NewStream))
+		{
 
+			if(IS(e, NewStream))
+			{
+				SIGNAL_UPDATE(NewStream, e);
+				DELETE(NewStream, e); // Clean up
+			}
+		}
+		//TODO: Add stream trigger and clean up here ^^^
 	}
 
 	void Destroy_Scheduler(_Registry& REGISTRY, _Entity e)
@@ -34,7 +43,6 @@ namespace SM2K
 		auto& stream = streamRegistry.Add<Stream>(streamName, REGISTRY.create());
 		stream.init(REGISTRY, streamName);
 		Print(_REGENT{&REGISTRY, e}, "Attached a stream named \"" + streamName + "\".", GetContex("Stream", &stream));
-		DELETE(NewStream, e); // Clean up
 		
 	}
 	void run_SkipBackStream(_Registry& REGISTRY, _Entity e)

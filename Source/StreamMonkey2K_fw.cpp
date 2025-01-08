@@ -30,9 +30,9 @@ namespace SM2K
 	};
 
 
-	void CreateAndStartInstance(sm2k& _smInstance)
+	void AllocateAndStartNewInstance(sm2k& _smInstance, bool _enableConsoleLogging)
 	{
-		AllocateRegistry(_smInstance);
+		AllocateNewInstance(_smInstance, _enableConsoleLogging);
 		Start(_smInstance);
 	}
 
@@ -42,15 +42,21 @@ namespace SM2K
 		FreeRegistry(_smInstance);
 	}
 
-	void AllocateRegistry(sm2k& _registry)
+	void AllocateNewInstance(sm2k& _registry, bool _enableConsoleLogging)
 	{
+		if (VerifyRegistry(_registry)) return; //If it's already allocated don't bother doing it again.
 		_Registry* reg = new _Registry;
 		_Entity core;
+
 
 		ECS::InitializeComponents(*reg);
 		reg->ctx().emplace<_Entity>(core = reg->create());
 		reg->emplace<Core>(core);
 		
+		EnableConsoleLogging(*reg, _enableConsoleLogging);
+		
+		Print({ reg, core }, "A Stream Monkey 2000 registry was successfully allocated!", GetContex("Core", reg));
+
 		_registry = reg;
 		AddRegistry(_registry);
 	}
@@ -75,12 +81,15 @@ namespace SM2K
 		stream.name = _name;
 
 		ADD(NewStream, streamScheduler, stream);
-		SIGNAL_UPDATE(NewStream, streamScheduler);
+		SIGNAL_UPDATE(StreamScheduler, streamScheduler);
+
 	}
 
-	void ConfigureStream(const sm2k& registry, const string& _name, const string& _trackFile, const string& _streamLogPath, string* _statusObserver)
+	void ConfigureStream(const sm2k& registry, const string& _name, const string& _trackFile, const string& _type,
+						const string& _streamLogPath, string* _statusObserver)
 	{
 		_Registry& _registry = *static_cast<_Registry*>(registry);
+
 		const auto streamScheduler = GRAB(StreamScheduler);
 		const auto sysPaths = GET(smSystemPaths, GGET(_Entity));
 		auto& streamRegistry = GET(StreamRegistry, streamScheduler);
@@ -88,7 +97,7 @@ namespace SM2K
 		auto process = const_cast<Stream*>(streamRegistry.GetProcess(_name));
 		if (process)
 		{
-			process->configure(sysPaths.streamInstanceDumpPath, _streamLogPath, _trackFile, _statusObserver);
+			process->configure(sysPaths.streamInstanceDumpPath, _streamLogPath, _trackFile, (_type == "VOD" ? stream_type::VOD : stream_type::LIVE), _statusObserver);
 		}
 		else Print({ &_registry, streamScheduler }, "Couldn't configure \"" + _name + "\". Not found in stream registry.", GetContex("StreamRegistry", &streamRegistry));
 
@@ -119,6 +128,12 @@ namespace SM2K
 		registry = nullptr;
 	}
 
+	void EnableConsoleLog(const sm2k& _registry, bool _state)
+	{
+		if (!VerifyRegistry(_registry)) return;
+		EnableConsoleLogging(*(static_cast<_Registry*>(_registry)), _state);
+	}
+
 };
 
 
@@ -144,10 +159,16 @@ int main(int argsc, char** args) // For Testing
 	sm2k test4 = nullptr;
 	sm2k test5 = nullptr;
 
-	CreateAndStartInstance(test);
+	AllocateAndStartNewInstance(test, true);
 
 	AddStream(test, "Lobby");
-	ConfigureStream(test, "Lobby", "TestTrack");
+	AddStream(test, "Test");
+	AddStream(test, "Wave");
+	AddStream(test, "Ch0");
+	ConfigureStream(test, "Lobby", "LobbyTrack", "LIVE");
+	ConfigureStream(test, "Test", "TestTrack", "LIVE");
+	ConfigureStream(test, "Wave", "WaveTrack", "LIVE");
+	ConfigureStream(test, "Ch0", "Ch0Track", "LIVE");
 
 	StopAndDestroyInstance(test);
 

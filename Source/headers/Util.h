@@ -9,7 +9,7 @@ namespace SM2K
 
 	string GetContex(const string& _name, void* _ptr);
 	void Print(_REGENT _reg, string _msg, const string& _contex = "");
-	void EnableConsoleLogging(_REGENT _reg, bool _state);
+	void EnableConsoleLogging(_Registry& _registry, bool _state);
 
 	struct FileDirectory // Extracts a file's directory path.
 	{

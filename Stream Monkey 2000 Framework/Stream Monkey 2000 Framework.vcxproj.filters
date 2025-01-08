@@ -39,9 +39,6 @@
     <ClCompile Include="..\Source\Core.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Source\ECS.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\Source\Exception.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

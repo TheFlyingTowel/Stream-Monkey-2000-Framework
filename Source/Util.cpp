@@ -75,9 +75,9 @@ namespace SM2K
 
 	}
 
-	void EnableConsoleLogging(_REGENT _reg, bool _state)
+	void EnableConsoleLogging(_Registry& _registry, bool _state)
 	{
-		auto& screenLog = _reg.registry->get<Core_layer::_Log>(_reg.entity).log;
+		auto& screenLog = GET(Core_layer::_Log, GGET(_Entity)).log;
 
 		screenLog.EnableConsoleLogging(_state);
 	}

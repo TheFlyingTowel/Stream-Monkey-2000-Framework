@@ -32,15 +32,14 @@ namespace SM2K
 	typedef void* sm2k;	// The stream Monkey 2000 Core registry type. 
 
 
-	extern "C" SM2K_FRAMEWORK_DLL void CreateAndStartInstance(sm2k& _smInstance);
+	extern "C" SM2K_FRAMEWORK_DLL void AllocateAndStartNewInstance(sm2k& _smInstance, bool _enableConsoleLogging = false);
 	extern "C" SM2K_FRAMEWORK_DLL void StopAndDestroyInstance(sm2k& _smInstance);
 	
-	extern "C" SM2K_FRAMEWORK_DLL void AllocateRegistry(sm2k& _registry);
+	extern "C" SM2K_FRAMEWORK_DLL void AllocateNewInstance(sm2k& _registry, bool _enableConsoleLogging = false);
 	extern "C" SM2K_FRAMEWORK_DLL void Start(const sm2k& _registry);
 	
 	extern "C" SM2K_FRAMEWORK_DLL void AddStream(const sm2k& _registry, const string& _name);
-	extern "C" SM2K_FRAMEWORK_DLL void ConfigureStream(const sm2k& _registry, const string& _name, const string& _trackFileName, const string& _streamLogPath = "./Log/", string* _statusObserver = nullptr);
-	//TODO: Add stream creation function.
+	extern "C" SM2K_FRAMEWORK_DLL void ConfigureStream(const sm2k& _registry, const string& _name, const string& _trackFileName, const string& _type, const string& _streamLogPath = "Log/", string* _statusObserver = nullptr);
 	//TODO: Add stream start function.
 	//TODO: Add stream control function.
 	//TODO: Add command processing function.
@@ -48,6 +47,7 @@ namespace SM2K
 
 	extern "C" SM2K_FRAMEWORK_DLL void Stop(const sm2k& _registry);
 	extern "C" SM2K_FRAMEWORK_DLL void FreeRegistry(sm2k& _registry);
+	extern "C" SM2K_FRAMEWORK_DLL void EnableConsoleLog(const sm2k& _registry, bool _state);
 };
 
 

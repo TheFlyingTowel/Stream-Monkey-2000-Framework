@@ -144,7 +144,6 @@
     <ClCompile Include="..\Source\BaseCmd.cpp" />
     <ClCompile Include="..\Source\Config.cpp" />
     <ClCompile Include="..\Source\Core.cpp" />
-    <ClCompile Include="..\Source\ECS.cpp" />
     <ClCompile Include="..\Source\Exception.cpp" />
     <ClCompile Include="..\Source\HashTable.cpp" />
     <ClCompile Include="..\Source\Interpreter.cpp" />

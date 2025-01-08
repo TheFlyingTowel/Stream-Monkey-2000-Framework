@@ -7,6 +7,14 @@ namespace SM2K
 
 	typedef _Entity		StreamID;
 
+	
+	enum class StreamType : u32
+	{
+		NONE = 0, LIVE, VOD
+	};
+
+	
+
 	// Tags //
 	TAG(StreamScheduler);
 	
@@ -21,18 +29,20 @@ namespace SM2K
 	COMPONENT(ReplaySourceStream) { string name; u32 replayCount; };
 
 	// Components //
-	COMPONENT(StreamInstance) 
+	COMPONENT(StreamInstance)
 	{
-		string name; string instancePath; string streamLogPath; 
-		string trackFile; string* streamStatus = nullptr; 
+		string name; string instancePath; string streamLogPath;
+		string trackFile; string hlsPath; string* streamStatus = nullptr;
+		StreamType type = StreamType::NONE;
 	};
 
 
 	// Process //
-
 	PROCESS(Stream)
 	{
 	public:
+
+
 		Stream(const StreamID & _id)
 			: id{ _id }
 		{}
@@ -47,31 +57,63 @@ namespace SM2K
 
 		void configure() override {};
 		void configure(const string& _instancePath, const string& _streamLogPath,
-						const string& _trackFile, string* _statusObserver = nullptr)
+						const string& _trackFile, const StreamType& _type, string* _statusObserver = nullptr, bool _store = true)
 		{
-			_Config config(_REGENT{registryRef, id}, true);
 			auto& self = registryRef->get<StreamInstance>(id);
-			
+			auto core = registryRef->ctx().get<_Entity>();
+			auto& sys = registryRef->get<Core_layer::smSystemPaths>(core);
+
 			self.instancePath = _instancePath + self.name + "/";
 			self.streamLogPath = self.instancePath + _streamLogPath;
-			self.trackFile = _trackFile;
+			self.hlsPath = sys.hlsBaseDumpPath + self.name + "/";
 			self.streamStatus = _statusObserver;
-			
-			config["StreamConfig"]["name"] = self.name;
-			config["StreamConfig"]["instancePath"] = self.instancePath;
-			config["StreamConfig"]["trackFile"] = self.trackFile;
-			config["StreamConfig"]["isLive"] = true;
+			self.trackFile = _trackFile;
+			self.type =  _type;
 
-			config.save(_instancePath);
+			
 
 			isConfigured = true;
 
 			Print({ registryRef, id }, "Stream \"" + self.name + "\" configured.", GetContex("Stream", this));
-
+			if (_store) storeConfig();
 		}
 		void failed() {}
 		void aborted() {}
 		void succeeded() {}
+
+		void storeConfig()
+		{
+			auto& self = registryRef->get<StreamInstance>(id);
+			_Config config(_REGENT{ registryRef, id }, true);
+
+			config[self.name + "_Config"]["name"] = self.name;
+			config[self.name + "_Config"]["instancePath"] = self.instancePath;
+			config[self.name + "_Config"]["hlsPath"] = self.hlsPath;
+			config[self.name + "_Config"]["logPath"] = self.streamLogPath;
+			config[self.name + "_Config"]["trackFile"] = self.trackFile;
+			config[self.name + "_Config"]["streamType"] = (self.type == StreamType::LIVE ? "LIVE" : "VOD"); // A propper function will be needed if more types are added.
+
+			std::filesystem::create_directory(self.instancePath);
+			std::filesystem::create_directory(self.hlsPath);
+			std::filesystem::create_directory(self.streamLogPath);
+
+
+
+			config.save(self.instancePath + self.name + ".ini");
+			registerWithCore();
+			
+			
+		}
+
+		void registerWithCore() 
+		{
+			auto& self = registryRef->get<StreamInstance>(id);
+			auto& coreConfig = *(registryRef->get<Core_layer::smConfig>(registryRef->ctx().get<_Entity>()).config); 
+
+			coreConfig["RegisteredStreams"][self.name] = self.instancePath + self.name + ".ini";
+			coreConfig.save("./core.ini");
+			Print({ registryRef, id }, "Registered \"" + self.name + "\" in core.", GetContex("CORE", this));
+		}
 
 		void update(_Type, sm2k _registry)
 		{
@@ -95,5 +137,9 @@ namespace SM2K
 	// Registry //
 
 	PROCESS_REGISTRY(StreamRegistry, Stream) {};
+
+
+
+	using stream_type = StreamType;
 
 };

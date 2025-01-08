@@ -11,10 +11,9 @@ namespace SM2K
 		const auto& core = _reg.registry->ctx().get<_Entity>();
 		auto& sysPaths = _reg.registry->get<smSystemPaths>(core);
 		string defaults = (sysPaths.dataRootPath + "default.ini");
-		string saved = ("./config.ini");
+		string saved = ("./core.ini");
 		namespace fs = std::filesystem;
-
-		if (bool s = fs::exists(saved) &&  fs::exists(defaults))
+		if (bool s = fs::exists(saved) && fs::exists(defaults))
 		{
 			auto dtime = fs::last_write_time(defaults);
 			auto stime = fs::last_write_time(saved);
@@ -36,6 +35,7 @@ namespace SM2K
 				generateDefaultFile(defaults);
 			
 		}
+		else if(fs::exists(defaults)) this->load(defaults);
 		else generateDefaultFile(defaults);
 		
 
@@ -44,7 +44,7 @@ namespace SM2K
 
 	_Config::~_Config()
 	{
-		this->save("./config.ini");
+		this->save("./core.ini");
 	}
 
 	void _Config::Load(const string& _file)
@@ -60,7 +60,7 @@ namespace SM2K
 	void _Config::generateDefaultFile(const string& _file)
 	{
 		auto path = FileDirectory(_file).path;
-		std::filesystem::create_directory(path);
+		std::filesystem::create_directories(path);
 		(*this)["Core"]["versionName"] = "Stream_Monkey_2000_Framework _Alpha";
 		(*this)["Core"]["version"] = "0.0.1";
 		(*this)["Core"]["dataRootPath"] = "./data/";

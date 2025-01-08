@@ -42,20 +42,8 @@ namespace SM2K
 			
 			while (core->isRunning)
 			{
-				if(ANY(e, NewStream, OpenStream, RebootStream,
-				CloseStream, SkipForwardStream, SkipBackStream, ReplaySourceStream))
-				{
-					if (IS(e, NewStream))
-					{
-						auto scheduler = GRAB(StreamScheduler);		// Get the stream scheduler.
-						auto newStreamData = GET(NewStream, e);		// Get the command data.
-						ADD(NewStream, scheduler, newStreamData);	// Send over the command to the scheduler with the data. 
-						DELETE(NewStream, e);						// Remove the "new stream" tag from this entity component.
-					}
-				}
+		
 			}
-
-			
 		}
 
 		void _webListener(_Registry* registry, _Entity e, Core* core)
@@ -85,10 +73,10 @@ namespace SM2K
 			sysPaths.urlBase = config->at("Stream").at("baseUrl").as<string>();
 			
 			if(!sysPaths.hlsBaseDumpPath.empty())
-				std::filesystem::create_directory(sysPaths.hlsBaseDumpPath);
+				std::filesystem::create_directories(sysPaths.hlsBaseDumpPath);
 			
 			if (!sysPaths.streamInstanceDumpPath.empty())
-				std::filesystem::create_directory(sysPaths.streamInstanceDumpPath);
+				std::filesystem::create_directories(sysPaths.streamInstanceDumpPath);
 			
 			ADD(StreamScheduler, _registry.create()); // Creates and adds the stream scheduler.
 			Print(_REGENT{&_registry, e}, "Initalized stream scheduler.", GetContex("CORE", &self));
@@ -149,9 +137,9 @@ namespace SM2K
 			
 			auto& config = _registry.emplace<smConfig>(e, make_a(_Config, _REGENT{ &_registry, e })).config; // Loads config file.
 			
-			std::filesystem::create_directory(sysPaths.tmpPath);
-			std::filesystem::create_directory(sysPaths.dataRootPath);
-			std::filesystem::create_directory(sysPaths.logPath);
+			std::filesystem::create_directories(sysPaths.tmpPath);
+			std::filesystem::create_directories(sysPaths.dataRootPath);
+			std::filesystem::create_directories(sysPaths.logPath);
 		}
 
 		void On_DestroySystemPath(_Registry& _registry, _Entity e)
