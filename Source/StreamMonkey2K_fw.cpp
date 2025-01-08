@@ -30,6 +30,18 @@ namespace SM2K
 	};
 
 
+	void CreateAndStartInstance(sm2k& _smInstance)
+	{
+		AllocateRegistry(_smInstance);
+		Start(_smInstance);
+	}
+
+	void StopAndDestroyInstance(sm2k& _smInstance)
+	{
+		Stop(_smInstance);
+		FreeRegistry(_smInstance);
+	}
+
 	void AllocateRegistry(sm2k& _registry)
 	{
 		_Registry* reg = new _Registry;
@@ -63,7 +75,24 @@ namespace SM2K
 		stream.name = _name;
 
 		ADD(NewStream, streamScheduler, stream);
-		DELETE(NewStream, streamScheduler); // Clean up here since it can't be done in the construction.
+		SIGNAL_UPDATE(NewStream, streamScheduler);
+	}
+
+	void ConfigureStream(const sm2k& registry, const string& _name, const string& _trackFile, const string& _streamLogPath, string* _statusObserver)
+	{
+		_Registry& _registry = *static_cast<_Registry*>(registry);
+		const auto streamScheduler = GRAB(StreamScheduler);
+		const auto sysPaths = GET(smSystemPaths, GGET(_Entity));
+		auto& streamRegistry = GET(StreamRegistry, streamScheduler);
+
+		auto process = const_cast<Stream*>(streamRegistry.GetProcess(_name));
+		if (process)
+		{
+			process->configure(sysPaths.streamInstanceDumpPath, _streamLogPath, _trackFile, _statusObserver);
+		}
+		else Print({ &_registry, streamScheduler }, "Couldn't configure \"" + _name + "\". Not found in stream registry.", GetContex("StreamRegistry", &streamRegistry));
+
+
 	}
 
 	void Stop(const sm2k& registry)
@@ -115,14 +144,20 @@ int main(int argsc, char** args) // For Testing
 	sm2k test4 = nullptr;
 	sm2k test5 = nullptr;
 
-	AllocateRegistry(test);
-	Start(test);
+	CreateAndStartInstance(test);
 
 	AddStream(test, "Lobby");
+	ConfigureStream(test, "Lobby", "TestTrack");
 
-	Stop(test);
-	FreeRegistry(test);
+	StopAndDestroyInstance(test);
 
+
+
+
+
+
+	return 0;
+}
 
 
 
@@ -202,9 +237,3 @@ int main(int argsc, char** args) // For Testing
 	//std::cout << "0x" << std::hex << (HashingFunctions::DefaultHash("echo")) << "\n";
 	//std::cout << "0x" << std::hex << (HashingFunctions::DefaultHash("still")) << "\n";
 	//std::cout << "0x" << std::hex << (HashingFunctions::DefaultHash("strain")) << "\n";
-
-
-	return 0;
-}
-
-

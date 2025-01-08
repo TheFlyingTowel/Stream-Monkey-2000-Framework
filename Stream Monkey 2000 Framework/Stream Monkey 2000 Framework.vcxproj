@@ -141,7 +141,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\Source\App.cpp" />
     <ClCompile Include="..\Source\BaseCmd.cpp" />
     <ClCompile Include="..\Source\Config.cpp" />
     <ClCompile Include="..\Source\Core.cpp" />
@@ -159,7 +158,6 @@
     <ClCompile Include="..\Source\Util.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Source\headers\App.h" />
     <ClInclude Include="..\Source\headers\BaseCmd.h" />
     <ClInclude Include="..\Source\headers\BinTree.h" />
     <ClInclude Include="..\Source\headers\Config.h" />

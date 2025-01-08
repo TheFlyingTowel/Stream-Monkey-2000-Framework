@@ -5,6 +5,29 @@
 namespace SM2K 
 {
 
+	namespace ECS
+	{
+
+		namespace {
+			std::list<ComponentFunc> compLogic;
+			std::list<ComponentFunc>& GetCompLogic()
+			{
+				return compLogic;
+			};
+		}
+
+		sm2kComponentLogic::sm2kComponentLogic(ComponentFunc _logic)
+		{
+			GetCompLogic().push_back(_logic);
+		}
+
+		void InitializeComponents(_Registry& REGISTRY)
+		{
+			for (auto& func : GetCompLogic())
+				func(REGISTRY);
+		}
+	}
+
 	namespace Core_layer
 	{
 
@@ -31,6 +54,8 @@ namespace SM2K
 					}
 				}
 			}
+
+			
 		}
 
 		void _webListener(_Registry* registry, _Entity e, Core* core)
@@ -44,6 +69,8 @@ namespace SM2K
 			{
 				
 			}
+
+			
 		}
 
 		void On_ConstructCore(_Registry& _registry, _Entity e)

@@ -4,11 +4,6 @@
 
 namespace SM2K
 {
-
-
-
-
-
 	using namespace Core_layer;
 
 	

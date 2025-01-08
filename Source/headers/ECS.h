@@ -7,7 +7,8 @@ namespace SM2K
 #define EXPAND(a) X(a)
 
 #ifndef REGISTRY
-#define REGISTRY _registry
+// Use this in arguments to enable the helper preprocessers.
+#define REGISTRY _registry	
 #endif
 
 #define X(x) x
@@ -47,6 +48,7 @@ namespace SM2K
 #define DELETE(_type, _entity) EXPAND(REGISTRY).remove<_type>(_entity) 
 #define GRAB_ALL(...) EXPAND(REGISTRY).view<__VA_ARGS__>() 
 #define GRAB(...) EXPAND(REGISTRY).view<__VA_ARGS__>()[0] 
+#define GRAB_AT(_index, ...) EXPAND(REGISTRY).view<__VA_ARGS__>()[_index] 
 #define ADD(_type, ...) EXPAND(REGISTRY).emplace<_type>(__VA_ARGS__) 
 #define REMOVE(_entity, ...) EXPAND(REGISTRY).remove<__VA_ARGS__>(_entity) 
 #define ADD_GLOBAL(_type, ...) EXPAND(REGISTRY).ctx().emplace<_type>(__VA_ARGS__) 

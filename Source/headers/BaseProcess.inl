@@ -15,14 +15,14 @@ namespace SM2K
 	};
 
 #define PROCESS(_name) class _name : public BaseProcess
-
-	struct ProcessRegistry
+	template<typename T = BaseProcess>
+	struct BaseProcessRegistry
 	{
-		template<typename T, typename... Args>
+		template<typename... Args>
 		inline T& Add(const string& _name, Args&&... args)
 		{
 			auto process = std::make_unique<T>(std::forward<Args>(args)...);
-			auto& ref = processes[_name] = std::move(*reinterpret_cast<std::unique_ptr<BaseProcess>*>(&process));
+			auto& ref = processes[_name] = std::move(process);
 			return *static_cast<T*>(&*ref);
 		}
 
@@ -46,7 +46,7 @@ namespace SM2K
 		{
 			scheduler.update(0, &_registry);
 		}
-		template<typename T = BaseProcess>
+		
 		inline void StartProcess(const string& _name)
 		{
 			if (!Has(_name))
@@ -71,6 +71,12 @@ namespace SM2K
 			return processes.find(_name) != processes.end();
 		}
 
+		inline const T* GetProcess(const string& _name)
+		{
+			if (!Has(_name)) return nullptr;
+			return const_cast<T*>(&(*processes.find(_name)->second));
+		}
+
 		inline bool IsRegistryEmpty()
 		{
 			return !scheduler.empty();
@@ -85,16 +91,17 @@ namespace SM2K
 			return scheduler.size();
 		}
 
-		~ProcessRegistry() 
+		~BaseProcessRegistry() 
 		{
 			Clear();
 		}
 	private:
 
-		std::unordered_map<string, std::unique_ptr<BaseProcess>> processes;
+		std::unordered_map<string, std::unique_ptr<T>> processes;
 		entt::basic_scheduler<u8> scheduler;
 
 	};
 
+#define PROCESS_REGISTRY(_name, _processType) struct _name : public BaseProcessRegistry<_processType>
 
 };

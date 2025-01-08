@@ -37,7 +37,6 @@
 #include "headers/Stream.h"
 #include "headers/CoreTypes.h"
 #include "headers/Core.h"
-#include "headers/App.h"
 #include "headers/HashTable.h"
 #include "headers/CmdTools.inl"
 #include "headers/Interpreter.h"

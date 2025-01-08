@@ -32,13 +32,18 @@ namespace SM2K
 	typedef void* sm2k;	// The stream Monkey 2000 Core registry type. 
 
 
+	extern "C" SM2K_FRAMEWORK_DLL void CreateAndStartInstance(sm2k& _smInstance);
+	extern "C" SM2K_FRAMEWORK_DLL void StopAndDestroyInstance(sm2k& _smInstance);
+	
 	extern "C" SM2K_FRAMEWORK_DLL void AllocateRegistry(sm2k& _registry);
 	extern "C" SM2K_FRAMEWORK_DLL void Start(const sm2k& _registry);
-	extern "C" SM2K_FRAMEWORK_DLL void AddStream(const sm2k& _registry, const string& _name);
 	
+	extern "C" SM2K_FRAMEWORK_DLL void AddStream(const sm2k& _registry, const string& _name);
+	extern "C" SM2K_FRAMEWORK_DLL void ConfigureStream(const sm2k& _registry, const string& _name, const string& _trackFileName, const string& _streamLogPath = "./Log/", string* _statusObserver = nullptr);
 	//TODO: Add stream creation function.
 	//TODO: Add stream start function.
 	//TODO: Add stream control function.
+	//TODO: Add command processing function.
 	//TODO: Add command processing function.
 
 	extern "C" SM2K_FRAMEWORK_DLL void Stop(const sm2k& _registry);
