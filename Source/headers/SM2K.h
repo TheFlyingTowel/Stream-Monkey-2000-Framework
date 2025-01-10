@@ -5,6 +5,7 @@ namespace SM2K
 {
 #define list(_type) std::list<_type>
 #define vector(_type) std::vector<_type>
+#define queue(_type) std::queue<_type>
 #define Shared(_type) std::shared_ptr<_type>
 #define make(_type) std::make_shared<_type>()
 #define make_a(_type, ...) std::make_shared<_type>(__VA_ARGS__)
@@ -48,9 +49,12 @@ namespace SM2K
 	typedef uint						ID;
 	typedef entt::registry				_Registry;
 	typedef entt::entity				_Entity;
-	
+	typedef _Entity						ProcessID;
+	typedef _Entity						ProcessPoolID;
+
 
 	using ComponentFunc = std::function<void(_Registry&)>;
+	using _Scheduler	= entt::basic_scheduler<_Registry&>;
 
 	struct _REGENT
 	{

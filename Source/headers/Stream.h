@@ -5,7 +5,7 @@
 namespace SM2K
 {
 
-	typedef _Entity		StreamID;
+	
 
 	
 	enum class StreamType : u32
@@ -43,7 +43,7 @@ namespace SM2K
 	public:
 
 
-		Stream(const StreamID & _id)
+		Stream(const ProcessID & _id)
 			: id{ _id }
 		{}
 
@@ -115,7 +115,7 @@ namespace SM2K
 			Print({ registryRef, id }, "Registered \"" + self.name + "\" in core.", GetContex("CORE", this));
 		}
 
-		void update(_Type, sm2k _registry)
+		void update(_Registry&, sm2k)
 		{
 
 
@@ -129,7 +129,7 @@ namespace SM2K
 
 	private:
 		bool isConfigured = false;
-		StreamID id;
+		ProcessID id;
 		_Registry* registryRef = nullptr;
 		GW::SYSTEM::GLog streamLog;
 	};

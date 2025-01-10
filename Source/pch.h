@@ -15,9 +15,12 @@
 #include <string>
 #include <list>
 #include <vector>
+#include <queue>
+#include <functional>
 #include <memory>
 #include <thread>
 #include <mutex>
+#include <condition_variable>
 #include <sstream>
 #include <iomanip>
 #include <unordered_map>
