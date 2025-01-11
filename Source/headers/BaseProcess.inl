@@ -35,10 +35,10 @@ namespace SM2K
 
 		_REGENT ref{ &_registry, GGET(_Entity) };
 		workers.reserve(_poolSize);
-		Print(ref, "Starting worker pool with a size of " + std::to_string(_poolSize) + ".", GetContex("Pool", this));
+		Print(ref, "Starting worker pool with a size of " + std::to_string(_poolSize), GetContex("Pool", this));
 		for (u64 i = 0; i < _poolSize; ++i)
 		{
-			Print(ref, "Starting worker: " + std::to_string(i) + ".", GetContex("Pool", this));
+			Print(ref, "Starting worker " + std::to_string(i), GetContex("Pool", this));
 			workers.emplace_back([&] {
 				Func task;
 				while (true)

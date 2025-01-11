@@ -44,7 +44,7 @@ namespace SM2K
 		auto& streamRegistry = GET(StreamRegistry, e);
 		auto& stream = streamRegistry.Add<Stream>(streamName, REGISTRY.create());
 		stream.init(REGISTRY, streamName);
-		Print(_REGENT{&REGISTRY, e}, "Attached a stream named \"" + streamName + "\".", GetContex("Stream", &stream));
+		Print(_REGENT{&REGISTRY, e}, "Attached a stream named \"" + streamName + "\"", GetContex("Stream", &stream));
 		
 	}
 	void run_SkipBackStream(_Registry& REGISTRY, _Entity e)
