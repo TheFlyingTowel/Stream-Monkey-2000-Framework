@@ -38,8 +38,19 @@ namespace SM2K
 		Print(ref, "Starting worker pool with a size of " + std::to_string(_poolSize), GetContex("Pool", this));
 		for (u64 i = 0; i < _poolSize; ++i)
 		{
+#ifdef NOT _DEBUG
 			Print(ref, "Starting worker " + std::to_string(i), GetContex("Pool", this));
-			workers.emplace_back([&] {
+#endif
+			workers.emplace_back([&, i]{
+				
+				{
+					std::unique_lock<mutex>  _lock(queue_mutex);
+#ifdef NOT _DEBUG
+					Print(ref, "Now running worker " + std::to_string(i), GetContex("Worker", &workers[i]));
+#endif		
+					cv.wait(_lock, [this] {return ready ; });
+					
+				}
 				Func task;
 				while (true)
 				{
@@ -48,6 +59,7 @@ namespace SM2K
 						std::unique_lock<mutex>  _lock(queue_mutex);
 						cv.wait(_lock, [this] {return stop || !tasks.empty(); });
 						if (stop && tasks.empty()) return;
+						
 						task = move(tasks.front());
 						tasks.pop();
 						
@@ -65,13 +77,8 @@ namespace SM2K
 
 	virtual ~BaseProcessPool()
 	{
-		{
-			std::lock_guard<mutex> _loack(queue_mutex);
-			stop = true;
-		}
-		cv.notify_all();
-		for (thread& worker : workers)
-			worker.join();
+		ready = false;
+		Stop();
 	}
 
 	inline void Add(Shared(_Type)& _process, const sm2k& _data = nullptr)
@@ -84,6 +91,27 @@ namespace SM2K
 		cv.notify_one();
 	}
 
+	inline void Stop() 
+	{
+		if (stop) return;
+		{
+			std::lock_guard<mutex> _loack(queue_mutex);
+			stop = true;
+		}
+
+		cv.notify_all();
+		for (thread& worker : workers)
+			worker.join();
+	}
+
+	inline void ReadyUp() 
+	{
+		{
+			std::lock_guard<mutex> _loack(queue_mutex);
+			ready = true;
+		}
+		cv.notify_all();
+	}
 
 	private:
 		vector(thread) workers;
@@ -91,6 +119,7 @@ namespace SM2K
 		mutex queue_mutex;
 		std::condition_variable cv;
 		bool stop = false;
+		bool ready = false;
 	};
 
 
@@ -182,8 +211,12 @@ namespace SM2K
 
 		inline virtual ~BaseProcessRegistry() 
 		{
+			Stop();
 			Clear();
 		}
+
+		inline void Stop() { pool->Stop(); }
+		inline void ReadyUp() { pool->ReadyUp(); }
 	protected:
 
 		_Registry& registry;

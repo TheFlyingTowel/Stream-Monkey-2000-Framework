@@ -6,7 +6,7 @@
 namespace SM2K 
 {
 
-
+	mutex print_mutex;
 		
 	FileDirectory::FileDirectory(const string& _file, bool format)
 	{
@@ -68,8 +68,11 @@ namespace SM2K
 	}
 	void Print(_REGENT _reg, string _msg, const string& _contex)
 	{
+		lockGaurd _lock(print_mutex);
+		if (!_reg.registry) return;
 		auto& _registry = *_reg.registry;
 		auto _entity = _reg.entity, core = _registry.ctx().get<_Entity>();
+		if (!_registry.valid(_entity))return;
 		_registry.emplace<Core_layer::_Message>(_entity, Core_layer::_Message{ _contex, _msg });
 		_registry.patch<Core_layer::_Log>(core);
 

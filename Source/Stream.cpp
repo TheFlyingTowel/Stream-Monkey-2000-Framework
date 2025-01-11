@@ -9,7 +9,7 @@ namespace SM2K
 	{
 		auto& config = *CGET(smConfig).config;
 		
-		ADD(StreamRegistry, e, _registry, config.at("Stream").at("poolCount").as<u32>());
+		ADD(StreamRegistry, e, _registry, config.at("Stream").at("poolCount").as<u32>()).ReadyUp();
 	}
 	
 	void Update_Scheduler(_Registry& REGISTRY, _Entity e) 

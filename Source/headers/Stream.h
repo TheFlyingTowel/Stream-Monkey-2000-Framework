@@ -113,7 +113,7 @@ namespace SM2K
 
 			coreConfig["RegisteredStreams"][self.name] = self.instancePath + self.name + ".ini";
 			coreConfig.save("./core.ini");
-			Print({ registryRef, id }, "Registered \"" + self.name + "\" in core", GetContex("CORE", this));
+			Print({ registryRef, id }, "Registered \"" + self.name + "\" in core", GetContex("Core", this));
 		}
 
 		void update(_Registry*, sm2k)
