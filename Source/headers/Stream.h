@@ -132,11 +132,33 @@ namespace SM2K
 		ProcessID id;
 		_Registry* registryRef = nullptr;
 		GW::SYSTEM::GLog streamLog;
+
+
+		LINK(StreamRegistry);
+
 	};
 
 	// Registry //
 
-	PROCESS_REGISTRY(StreamRegistry, Stream) {};
+	PROCESS_REGISTRY(StreamRegistry, Stream) 
+	{
+	public:
+		StreamRegistry(_Registry& _registry, u32 _poolSize = 16) 
+			:BaseProcessRegistry(_registry, _poolSize)
+		{}
+
+
+
+		void Clear() override
+		{
+			for (auto& [name, stream] : processes)
+				registry.destroy(((Stream*)&*stream)->id);
+
+			((BaseProcessRegistry<Stream>*)this)->Clear();
+		}
+
+
+	};
 
 
 

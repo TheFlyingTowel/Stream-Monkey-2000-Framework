@@ -3,6 +3,7 @@
 
 namespace SM2K
 {
+#define move(x) std::move(x)
 #define list(_type) std::list<_type>
 #define vector(_type) std::vector<_type>
 #define queue(_type) std::queue<_type>
@@ -54,7 +55,7 @@ namespace SM2K
 
 
 	using ComponentFunc = std::function<void(_Registry&)>;
-	using _Scheduler	= entt::basic_scheduler<_Registry&>;
+	using _Scheduler	= entt::basic_scheduler<_Registry*>;
 
 	struct _REGENT
 	{

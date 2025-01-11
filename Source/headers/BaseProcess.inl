@@ -6,7 +6,7 @@ namespace SM2K
 {
 
 
-	INN_PROCESS(BaseProcess, _Registry&)
+	INN_PROCESS(BaseProcess, _Registry*)
 	{
 	public:
 		virtual ~BaseProcess() = default;
@@ -19,67 +19,68 @@ namespace SM2K
 
 
 
-	template<typename _Type = BaseProcess>
+	template<class _Type = BaseProcess>
 	class BaseProcessPool
 	{
 	public:
 
 	struct Func
 	{
-		_Type* process = nullptr;
+		Shared(_Type) process = nullptr;
 		sm2k data = nullptr;
 	};
 
-		BaseProcessPool(_Registry& _registry, ProcessID _id, u64 _poolSize)
-			:id{ _id }
+	BaseProcessPool(_Registry& _registry, u32 _poolSize)
+	{
+
+		workers.reserve(_poolSize);
+
+		for (u64 i = 0; i < _poolSize; ++i)
 		{
-			workers.reserve(_poolSize);
-			for (u64 i = 0; i < _poolSize; ++i)
-			{
-				workers.emplace_back([&] {
-					Func task;
-					while (true)
+			workers.emplace_back([&] {
+				Func task;
+				while (true)
+				{
+					if (!task.process)
 					{
-						if (!task.process)
-						{
-							std::unique_lock<mutex>  _lock(queue_mutex);
-							cv.wait(_lock, [this] {return stop || !tasks.empty(); });
-							if (stop && tasks.empty()) return;
-							task = std::move(tasks.front());
-							tasks.pop();
-						}
-
-						if (task.process->alive())
-							task.process->tick(_registry, task.data);
-						else if (task.process->finished() || task.process->rejected())
-							task.process = nullptr; // Move on if the process stopped.
-
+						std::unique_lock<mutex>  _lock(queue_mutex);
+						cv.wait(_lock, [this] {return stop || !tasks.empty(); });
+						if (stop && tasks.empty()) return;
+						task = move(tasks.front());
+						tasks.pop();
+						
 					}
-					});
-			}
+					
+					if (task.process->alive())
+						task.process->tick(&_registry, task.data);
+					else if (task.process->finished() || task.process->rejected())
+						task.process = nullptr; // Move on if the process stopped.
+
+				}
+				});
 		}
+	};
 
-
-		void Add(BaseProcess*&& _process, const sm2k& _data = nullptr)
+	virtual ~BaseProcessPool()
+	{
 		{
-			{
-				std::lock_guard<mutex> _lock(queue_mutex);
-				Func f{ std::forward<BaseProcess*>(_process), _data };
-				tasks.emplace(std::move(f));
-			}
-			cv.notify_one();
+			std::lock_guard<mutex> _loack(queue_mutex);
+			stop = true;
 		}
+		cv.notify_all();
+		for (thread& worker : workers)
+			worker.join();
+	}
 
-		~BaseProcessPool()
+	inline void Add(Shared(_Type)& _process, const sm2k& _data = nullptr)
+	{
 		{
-			{
-				std::lock_guard<mutex> _loack(queue_mutex);
-				stop = true;
-			}
-			cv.notify_all();
-			for (thread& worker : workers)
-				worker.join();
+			std::lock_guard<mutex> _lock(queue_mutex);
+			Func f{(_process), _data};
+			tasks.emplace(move(f));
 		}
+		cv.notify_one();
+	}
 
 
 	private:
@@ -88,39 +89,40 @@ namespace SM2K
 		mutex queue_mutex;
 		std::condition_variable cv;
 		bool stop = false;
-		ProcessPoolID id;
-
-		
 	};
 
 
-	using ProcessPoolFunc = std::function<void(_Registry&, sm2k)>;
+	using ProcessPoolFunc = std::function<void(_Registry*, sm2k)>;
 
-	template<typename _Type = BaseProcess>
-	struct BaseProcessRegistry
+	template<class _Type = Stream>
+	class BaseProcessRegistry
 	{
+	public:
+		BaseProcessRegistry(_Registry& _registry, u32 _poolSize)
+			: registry{_registry}, pool{ make_a(BaseProcessPool<_Type>, _registry, _poolSize) }
+		{}
 
-		BaseProcessRegistry(_Registry& _registry, u64 _size)
+		template<typename... Args>
+		inline BaseProcess& _Add(const string& _name, Args&&... args)
 		{
-			auto id = _registry.create();
-			pool = make_a(BaseProcessPool<_Type>, ADD(BaseProcessPool<_Type>, id, { _registry, id, _size }));
+			auto process = make_a(_Type, std::forward<Args>(args)...);
+			auto& ref = processes[_name] = move(process);
+			return *static_cast<BaseProcess*>(&*ref);
 		}
-
+		
 		template<typename... Args>
 		inline _Type& Add(const string& _name, Args&&... args)
 		{
-			auto process = std::make_unique<_Type>(std::forward<Args>(args)...);
-			auto& ref = processes[_name] = std::move(process);
-			return *static_cast<_Type*>(&*ref);
+			return *static_cast<_Type*>(_Add(_name, std::forward<Args>(args)...));
 		}
 
-		inline void Clear()
+		inline virtual void Clear()
 		{
 			scheduler.clear();
 			processes.clear();
 		}
 
-		inline void Remove(const string& _name)
+		inline virtual void Remove(const string& _name)
 		{
 
 			if (processes[_name]->alive())
@@ -130,12 +132,7 @@ namespace SM2K
 			processes.erase(_name);
 		}
 
-		inline void Update(_Registry& _registry, sm2k _optional = nullptr)
-		{
-			scheduler.update(_registry, _optional);
-		}
-		
-		inline void StartProcess(const string& _name)
+		inline virtual void StartProcess(const string& _name)
 		{
 			if (!Has(_name))
 			{
@@ -149,43 +146,45 @@ namespace SM2K
 				return;
 			}
 
-			scheduler.attach<_Type>(*processes[_name]);
+			scheduler.attach<BaseProcess>(*static_cast<BaseProcess*>(&*processes[_name]));
+			pool->Add(processes[_name]);
 
 
 		}
 
-		inline bool Has(const string& _name)
+		inline virtual bool Has(const string& _name)
 		{
 			return processes.find(_name) != processes.end();
 		}
 
-		inline const _Type* GetProcess(const string& _name)
+		inline virtual const _Type* GetProcess(const string& _name)
 		{
 			if (!Has(_name)) return nullptr;
-			return const_cast<_Type*>(&(*processes.find(_name)->second));
+			return reinterpret_cast<_Type*>(&*(processes.find(_name)->second));
 		}
 
-		inline bool IsRegistryEmpty()
+		inline virtual bool IsRegistryEmpty()
 		{
 			return !scheduler.empty();
 		}
 
-		inline u64 GetProcessCount()
+		inline virtual u64 GetProcessCount()
 		{
 			return processes.size();
 		}
-		inline u64 GetRunningProcessCount()
+		inline virtual u64 GetRunningProcessCount()
 		{
 			return scheduler.size();
 		}
 
-		~BaseProcessRegistry() 
+		inline virtual ~BaseProcessRegistry() 
 		{
 			Clear();
 		}
-	private:
+	protected:
 
-		std::unordered_map<string, std::unique_ptr<_Type>> processes;
+		_Registry& registry;
+		std::unordered_map<string, Shared(_Type)> processes;
 		_Scheduler scheduler;
 		Shared(BaseProcessPool<_Type>) pool;
 
@@ -195,6 +194,8 @@ namespace SM2K
 
 #define PROCESS_POOL(_name, _type) class _name : public BaseProcessPool<_type>
 
-#define PROCESS_REGISTRY(_name, _processType) struct _name : public BaseProcessRegistry<_processType>
+#define PROCESS_REGISTRY(_name, _processType) class _name : public BaseProcessRegistry<_processType>
+
+#define LINK(_name) friend class _name
 
 };

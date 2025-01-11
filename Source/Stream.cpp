@@ -7,7 +7,9 @@ namespace SM2K
 	
 	void Construct_Scheduler(_Registry& REGISTRY, _Entity e)
 	{
-		ADD(StreamRegistry, e);
+		auto& config = *CGET(smConfig).config;
+		
+		ADD(StreamRegistry, e, _registry, config.at("Stream").at("poolCount").as<u32>());
 	}
 	
 	void Update_Scheduler(_Registry& REGISTRY, _Entity e) 
