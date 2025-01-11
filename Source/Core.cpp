@@ -81,9 +81,11 @@ namespace SM2K
 				std::filesystem::create_directories(sysPaths.streamInstanceDumpPath);
 			
 
-
-			ADD(StreamScheduler, _registry.create()); // Creates and adds the stream scheduler.
+			auto sch = _registry.create();
+			ADD(StreamScheduler, sch); // Creates and adds the stream scheduler.
 			Print(_REGENT{&_registry, e}, "Initalized stream scheduler.", GetContex("CORE", &self));
+
+			
 		}
 
 
@@ -128,6 +130,7 @@ namespace SM2K
 			
 			lockGaurd lock(self.coreMutex);
 			self.isRunning = false;
+
 			if(self.control) self.control->join();
 		}
 
