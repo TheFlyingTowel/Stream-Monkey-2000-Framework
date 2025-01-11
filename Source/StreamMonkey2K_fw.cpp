@@ -51,9 +51,10 @@ namespace SM2K
 
 		ECS::InitializeComponents(*reg);
 		reg->ctx().emplace<_Entity>(core = reg->create());
+		reg->emplace<Core_layer::_EnableConsoleLogging>(core).enableConsoleLog = _enableConsoleLogging;
 		reg->emplace<Core>(core);
 		
-		EnableConsoleLogging(*reg, _enableConsoleLogging);
+		//EnableConsoleLogging(*reg, _enableConsoleLogging);
 		
 		Print({ reg, core }, "A Stream Monkey 2000 registry was successfully allocated!", GetContex("Core", reg));
 

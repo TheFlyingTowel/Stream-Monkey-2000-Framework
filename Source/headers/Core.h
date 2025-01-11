@@ -18,6 +18,11 @@ namespace SM2K
 
 		// Components //
 
+		COMPONENT(_EnableConsoleLogging)
+		{
+			bool enableConsoleLog;
+		};
+
 		COMPONENT(Core)
 		{
 			cv cv;
@@ -28,7 +33,6 @@ namespace SM2K
 			mutable mutex requestMutex;
 			mutable mutex responceMutex;
 			bool isRunning;
-			//ComBuff buffer;
 		};
 
 		COMPONENT(smConfig) 

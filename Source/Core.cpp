@@ -68,6 +68,8 @@ namespace SM2K
 			auto& config = GET(smConfig, e).config; // Gets config file data.
 			auto& log = ADD(_Log, e);
 
+			log.log.EnableConsoleLogging(GET(_EnableConsoleLogging, e).enableConsoleLog);
+
 			sysPaths.hlsBaseDumpPath = config->at("Stream").at("hlsBaseDumpPath").as<string>();
 			sysPaths.streamInstanceDumpPath = config->at("Stream").at("instancePath").as<string>();
 			sysPaths.urlBase = config->at("Stream").at("baseUrl").as<string>();
@@ -78,6 +80,8 @@ namespace SM2K
 			if (!sysPaths.streamInstanceDumpPath.empty())
 				std::filesystem::create_directories(sysPaths.streamInstanceDumpPath);
 			
+
+
 			ADD(StreamScheduler, _registry.create()); // Creates and adds the stream scheduler.
 			Print(_REGENT{&_registry, e}, "Initalized stream scheduler.", GetContex("CORE", &self));
 		}

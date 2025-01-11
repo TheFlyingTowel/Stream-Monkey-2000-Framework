@@ -46,6 +46,7 @@ namespace SM2K
 		Stream(const ProcessID & _id)
 			: id{ _id }
 		{}
+		~Stream() {};
 
 		void init(_Registry& _registry, const string& _name = "<Unnamed>")
 		{
@@ -115,7 +116,7 @@ namespace SM2K
 			Print({ registryRef, id }, "Registered \"" + self.name + "\" in core.", GetContex("CORE", this));
 		}
 
-		void update(_Registry&, sm2k)
+		void update(_Registry*, sm2k)
 		{
 
 

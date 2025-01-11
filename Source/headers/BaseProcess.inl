@@ -33,10 +33,12 @@ namespace SM2K
 	BaseProcessPool(_Registry& _registry, u32 _poolSize)
 	{
 
+		_REGENT ref{ &_registry, GGET(_Entity) };
 		workers.reserve(_poolSize);
-
+		Print(ref, "Starting worker pool with a size of " + std::to_string(_poolSize) + ".", GetContex("Pool", this));
 		for (u64 i = 0; i < _poolSize; ++i)
 		{
+			Print(ref, "Starting worker: " + std::to_string(i) + ".", GetContex("Pool", this));
 			workers.emplace_back([&] {
 				Func task;
 				while (true)
@@ -94,7 +96,7 @@ namespace SM2K
 
 	using ProcessPoolFunc = std::function<void(_Registry*, sm2k)>;
 
-	template<class _Type = Stream>
+	template<class _Type = BaseProcess>
 	class BaseProcessRegistry
 	{
 	public:
@@ -103,17 +105,17 @@ namespace SM2K
 		{}
 
 		template<typename... Args>
-		inline BaseProcess& _Add(const string& _name, Args&&... args)
+		inline _Type& Add(const string& _name, Args&&... args)
 		{
 			auto process = make_a(_Type, std::forward<Args>(args)...);
 			auto& ref = processes[_name] = move(process);
-			return *static_cast<BaseProcess*>(&*ref);
+			return *ref;
 		}
 		
 		template<typename... Args>
-		inline _Type& Add(const string& _name, Args&&... args)
+		inline BaseProcess& _Add(const string& _name, Args&&... args)
 		{
-			return *static_cast<_Type*>(_Add(_name, std::forward<Args>(args)...));
+			return *static_cast<BaseProcess*>(&_Add(_name, std::forward<Args>(args)...));
 		}
 
 		inline virtual void Clear()
@@ -131,8 +133,9 @@ namespace SM2K
 			}
 			processes.erase(_name);
 		}
-
-		inline virtual void StartProcess(const string& _name)
+		
+		
+		inline void StartProcess(const string& _name)
 		{
 			if (!Has(_name))
 			{
@@ -146,7 +149,7 @@ namespace SM2K
 				return;
 			}
 
-			scheduler.attach<BaseProcess>(*static_cast<BaseProcess*>(&*processes[_name]));
+			scheduler.attach<_Type>(*processes[_name]);
 			pool->Add(processes[_name]);
 
 
@@ -160,7 +163,7 @@ namespace SM2K
 		inline virtual const _Type* GetProcess(const string& _name)
 		{
 			if (!Has(_name)) return nullptr;
-			return reinterpret_cast<_Type*>(&*(processes.find(_name)->second));
+			return static_cast<_Type*>(&*(processes.find(_name)->second));
 		}
 
 		inline virtual bool IsRegistryEmpty()
