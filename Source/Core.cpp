@@ -2,7 +2,7 @@
 #include "pch.h"
 
 
-namespace SM2K 
+namespace SM2K
 {
 
 	namespace ECS
@@ -39,10 +39,10 @@ namespace SM2K
 		{
 			auto& _registry = *registry;
 			ADD(Control, e);
-			
+
 			while (core->isRunning)
 			{
-		
+
 			}
 		}
 
@@ -50,15 +50,15 @@ namespace SM2K
 		{
 			auto& _registry = *registry;
 			auto& _core = *core;
-			
+
 			ADD(Web, e);
 
 			while (_core.isRunning)
 			{
-				
+
 			}
 
-			
+
 		}
 
 		void On_ConstructCore(_Registry& _registry, _Entity e)
@@ -73,19 +73,19 @@ namespace SM2K
 			sysPaths.hlsBaseDumpPath = config->at("Stream").at("hlsBaseDumpPath").as<string>();
 			sysPaths.streamInstanceDumpPath = config->at("Stream").at("instancePath").as<string>();
 			sysPaths.urlBase = config->at("Stream").at("baseUrl").as<string>();
-			
+
 			if(!sysPaths.hlsBaseDumpPath.empty())
 				std::filesystem::create_directories(sysPaths.hlsBaseDumpPath);
-			
+
 			if (!sysPaths.streamInstanceDumpPath.empty())
 				std::filesystem::create_directories(sysPaths.streamInstanceDumpPath);
-			
+
 
 			auto sch = _registry.create();
 			ADD(StreamScheduler, sch); // Creates and adds the stream scheduler.
 			Print(_REGENT{&_registry, e}, "Initalized stream scheduler.", GetContex("Core", &self));
 
-			
+
 		}
 
 
@@ -112,7 +112,7 @@ namespace SM2K
 					self.webListener->detach();
 					DELETE(CoreStart, e);
 				}
-				else if (IS(e, CoreStop)) 
+				else if (IS(e, CoreStop))
 				{
 					self.isRunning = false;
 					auto control = GRAB(Control);
@@ -121,13 +121,13 @@ namespace SM2K
 					_registry.destroy(web);
 					DELETE(CoreStop, e);
 				}
-			} 
-		} 
+			}
+		}
 
 		void On_DestroyCore(_Registry& _registry, _Entity e)
 		{
 			auto& self = GET(Core, e);
-			
+
 			lockGaurd lock(self.coreMutex);
 			self.isRunning = false;
 
@@ -141,9 +141,9 @@ namespace SM2K
 			sysPaths.tmpPath = "./.sm2k/";
 			sysPaths.dataRootPath = "./data/";
 			sysPaths.logPath = "./data/logs/";
-			
+
 			auto& config = _registry.emplace<smConfig>(e, make_a(_Config, _REGENT{ &_registry, e })).config; // Loads config file.
-			
+
 			std::filesystem::create_directories(sysPaths.tmpPath);
 			std::filesystem::create_directories(sysPaths.dataRootPath);
 			std::filesystem::create_directories(sysPaths.logPath);
@@ -151,12 +151,12 @@ namespace SM2K
 
 		void On_DestroySystemPath(_Registry& _registry, _Entity e)
 		{
-			auto& sys = GET(smSystemPaths, e); 
+			auto& sys = GET(smSystemPaths, e);
 			std::filesystem::remove_all(sys.tmpPath);
 
 		}
 
-		CONNECT_COMPONENT() 
+		CONNECT_COMPONENT()
 		{
 			CONNECT_ON_CONSTRUCT(Core, On_ConstructCore);
 			CONNECT_ON_UPDATE(Core, On_SignalCore);
@@ -198,7 +198,7 @@ namespace SM2K
 		//		{
 		//			null_buffer(resp.raw, RESPONCE_BUFFER_SIZE); // Delete data at the request data loaction. Request instance is stll valid, but type and values will be null.
 		//			m_freeRequests.emplace_back(_id);
-		//		
+		//
 		//		}
 
 		//		return !resp.results;
@@ -228,13 +228,13 @@ namespace SM2K
 		//	if(p_instance) throw Error(LEVEL_2, "Invalid constuction of 'Core'... \nYou can NOT manualy constuct a Core object. Please use 'Core::Get()'");
 		//	for(ID i = 0; i < 1024; ++i)
 		//		m_freeRequests.push_back(i);
-		//	
+		//
 		//	p_buffer = make(ComBuff_t);
 		//	memset(p_buffer->request, 0x0, sizeof(Request_t) * 1024);
 		//	memset(p_buffer->responce, 0x0, sizeof(Responce_t) * 1024);
 		//	//p_instance = CoreInstance{ (Core*)((void*)0xffffffffffffffff), [](Core*) {} }; // Ser to a null value for safety.
-		//	
-		//	
+		//
+		//
 		//}
 
 
@@ -243,7 +243,7 @@ namespace SM2K
 		//	if (!p_instance || p_instance.get() == (void*)0xffffffffffffffff)
 		//	{
 		//		return p_instance = make_singleton(Core);
-		//		
+		//
 		//	}
 		//	else return p_instance;
 		//}
@@ -268,7 +268,7 @@ namespace SM2K
 		//	p_control = make_a(thread, &Core::_control, this, this);
 		//	p_webListener = make_a(thread, &Core::_webListener, this, this);
 		//	p_webListener->detach();
-		//	
+		//
 		//}
 		//void Core::Stop()
 		//{
@@ -278,7 +278,7 @@ namespace SM2K
 		//	p_control->join();
 		//	Shared(App)& t = ((Shared(App)&)App::Get());
 		//	t.reset();
-		//	
+		//
 		//}
 
 		//void Core::SendRequest(ID& _id, cstring data, RequestType communicationType, cstring metaData)
@@ -299,7 +299,7 @@ namespace SM2K
 		//	{
 		//		lockUnique lok(m_requestMutex);
 		//		m_cv.wait(lok, [this]() { return !m_freeRequests.empty(); });
-		//		
+		//
 		//		_id = m_freeRequests.front();
 		//		m_freeRequests.pop_front();
 		//		lok.unlock();
@@ -316,7 +316,7 @@ namespace SM2K
 		//		null_buffer(p_buffer->request[_id].metaData, 1024); // ensures the buffer is clean
 		//		memcpy(p_buffer->request[_id].metaData, _meta, ((_metaSize <= 1023) ? _metaSize : 1023));
 		//	}
-		//	
+		//
 		//	signalApp(_id);
 		//	return _id;
 		//}
