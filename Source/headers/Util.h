@@ -11,6 +11,99 @@ namespace SM2K
 	void Print(_REGENT _reg, string _msg, const string& _contex = "");
 	void EnableConsoleLogging(_Registry& _registry, bool _state);
 
+
+
+	COMPONENT(FilePath) 
+	{
+		string path;
+	};
+
+	/// <summary>
+	/// A container for the read line file pointer position.
+	/// </summary>
+	COMPONENT(PosData)
+	{
+		u64 _current_postion;
+		u64 _max_line_index;
+		s8 _current_index = 7;
+		PosData() : _current_postion{ 0 }, _max_line_index{ 0 }, _current_index{ char(-1) } {}
+		PosData(u64 _pos) : _current_postion{ _pos }, _max_line_index{ 0 }, _current_index{ char(-1) } {}
+		PosData(u64 _pos, s8 _ndx) : _current_postion{ _pos }, _max_line_index{ 0 }, _current_index{ _ndx } {}
+	};
+
+	struct smCompression
+	{
+	private:
+		struct Node
+		{
+			Node* left;
+			Node* right;
+			Node* parent;
+
+			s16 value;
+			u16 frequency;
+
+			Node(s16 _value, u16 _frequency, Node* _left = nullptr, Node* _right = nullptr, Node* _parent = nullptr)
+				:value{_value}, frequency{_frequency}, left{_left}, right{_right}, parent{_parent}
+			{}
+
+		};
+
+		struct NodeCompare 
+		{
+			bool operator()(const Node* a, const Node* b)
+			{
+				return (a->frequency > b->frequency);
+			}
+		};
+
+	public:
+
+		smCompression(_Registry& _registry, _Entity e)
+			: registry{_registry}, entity{e}, path{GET(FilePath, e).path}
+		{
+			DELETE(FilePath, e);
+		};
+		~smCompression() 
+		{
+			_clear();
+		};
+		std::ofstream& bv_out(std::ofstream& _out, std::vector<bool>& _bits);
+		std::ifstream& bv_in(std::ifstream& _in, bool& _bit);
+		void CompressByLine(const vector(string)& _lines, const u8 _endLine = '\n');
+		void ReadByLine(string& _line, const char& _endLine);
+		void ReadByIndex(string& _line, const u64& _index);
+		void End();
+	private:
+		_Registry& registry;
+		_Entity entity;
+		string path;
+		oss data;
+		u32 frequencyTable[256]{ 0x0 };
+		vector(Node*) leafList;
+		vector(bool) encodingTable[256];
+		PosData positionData;
+		
+		Node* tree = nullptr;
+		
+		char bit_buffer = 0x0;
+		char bit_index = 7;
+
+		void _clear();
+		void _clear(Node* _node);
+		void generateFrequencyTable(vector(string) _data);
+		void generateLeafList();
+		void generateTree();
+		void generateEncodingTable();
+
+		char decompressChar(std::ifstream& ifs, Node* _node);
+
+		void saveHeader();
+
+		void saveLinePosData();
+		void loadLinePosData();
+	};
+
 	struct FileDirectory // Extracts a file's directory path.
 	{
 		string path;
