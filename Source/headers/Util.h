@@ -25,10 +25,11 @@ namespace SM2K
 	{
 		u64 _current_postion;
 		u64 _max_line_index;
-		s8 _current_index = 7;
-		PosData() : _current_postion{ 0 }, _max_line_index{ 0 }, _current_index{ char(-1) } {}
-		PosData(u64 _pos) : _current_postion{ _pos }, _max_line_index{ 0 }, _current_index{ char(-1) } {}
-		PosData(u64 _pos, s8 _ndx) : _current_postion{ _pos }, _max_line_index{ 0 }, _current_index{ _ndx } {}
+		u8 _bit_index;
+		u8 _bit_buffer;
+		PosData() : _current_postion{ 0 }, _max_line_index{ 0 }{}
+		PosData(u64 _pos) : _current_postion{ _pos }, _max_line_index{ 0 } {}
+		//PosData(u64 _pos, s8 _ndx) : _current_postion{ _pos }, _max_line_index{ 0 }, _current_index{ _ndx } {}
 	};
 
 	struct smCompression
@@ -68,13 +69,14 @@ namespace SM2K
 		{
 			_clear();
 		};
-		std::ofstream& bv_out(std::ofstream& _out, std::vector<bool>& _bits);
+		std::fstream& bv_out(std::fstream& _out, std::vector<bool>& _bits);
 		std::ifstream& bv_in(std::ifstream& _in, bool& _bit);
 		void CompressByLine(const vector(string)& _lines, const u8 _endLine = '\n');
-		void ReadByLine(string& _line, const char& _endLine);
-		void ReadByIndex(string& _line, const u64& _index);
-		void End();
+		void ReadByLine(string& _line, const char& _endLine = '\n');
+		void ReadByIndex(string& _line, const u64& _index, const char _endLine = '\n');
+		void End(); // Removes this componetent from the entity.
 	private:
+		bool isOpen = false;
 		_Registry& registry;
 		_Entity entity;
 		string path;

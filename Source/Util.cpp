@@ -165,20 +165,21 @@ namespace SM2K
 	void smCompression::generateFrequencyTable(vector(string) _data)
 	{
 		memset(frequencyTable, 0x0, 256 * sizeof(u32));
-		s32 n = 0;
+		
 		while (!_data.empty())
 		{
-			string line = _data[n];
+			string line = _data[0];
 			while (!line.empty())
 			{
 				++frequencyTable[(u8)line[0]];
 				line.erase(0, 1);
 			}
+			_data.erase(_data.begin());
 		}
 
 	}
 
-	std::ofstream& smCompression::bv_out(std::ofstream& _out, std::vector<bool>& _bits)
+	std::fstream& smCompression::bv_out(std::fstream& _out, std::vector<bool>& _bits)
 	{
 		for (auto bit : _bits)
 		{
@@ -217,10 +218,11 @@ namespace SM2K
 		generateLeafList();
 		generateTree();
 		generateEncodingTable();
-
-		std::ofstream ofs(path, std::ios::binary);
+		std::ofstream t(path, std::ios::binary);t.close();
+		std::fstream ofs(path, std::ios::binary | std::ios::out | std::ios::in);
+		isOpen = true;
 		ofs.seekp(0);
-		PosData pos(sizeof(PosData));
+		PosData pos { sizeof(PosData) };
 		ofs.write((char*)&pos, sizeof(PosData));
 
 		u32 maxIndex = -1;
@@ -233,11 +235,14 @@ namespace SM2K
 		}
 		bv_out(ofs, encodingTable[(u8)EOT]);
 		++maxIndex;
-		ofs.flush();
 
-		ofs.write((char*)frequencyTable, sizeof(u32) * 256);
-		ofs.close();
+		ofs.write((char*)frequencyTable, sizeof(frequencyTable));
 		pos._max_line_index = maxIndex;
+		pos._current_postion = ofs.tellp();
+		pos._bit_buffer = bit_buffer;
+		pos._bit_index = bit_index;
+		ofs.close();
+		isOpen = false;
 		positionData = pos;
 		saveLinePosData();
 	}
@@ -246,8 +251,7 @@ namespace SM2K
 	{
 		oss result;
 		std::ifstream ifs(path, std::ios::binary);
-		int index = 0;
-
+		isOpen = true;
 		ifs.seekg(-1 * sizeof(frequencyTable), std::ios::end);
 		ifs.read((char*)frequencyTable, sizeof(frequencyTable));
 		generateLeafList();
@@ -255,8 +259,7 @@ namespace SM2K
 
 		loadLinePosData();
 		ifs.seekg(positionData._current_postion);
-		index = positionData._current_index;
-
+		bit_index = positionData._bit_index;
 		if(positionData._current_postion != sizeof(PosData))
 		{
 			char tmp = 0;
@@ -269,8 +272,8 @@ namespace SM2K
 			{
 				result.str("");
 				positionData._current_postion = sizeof(PosData);
-				positionData._current_index = -1;
 				ifs.close();
+				isOpen = false;
 				saveLinePosData();
 				_line = result.str();
 				return;
@@ -279,7 +282,6 @@ namespace SM2K
 		else
 		{
 			ifs.seekg(positionData._current_postion);
-			bit_index = (positionData._current_index);
 		}
 		char tmp = 0x0;
 		while(true)
@@ -288,14 +290,82 @@ namespace SM2K
 
 
 			if (tmp == EOT || tmp == _endLine) break;
-			positionData._current_index = ++index;
 			positionData._current_postion = ifs.tellg();
 			result << tmp;
 		}
 
-
+		if(tmp == EOT)
+		{
+			result.str("");
+			positionData._current_postion = sizeof(PosData);
+			ifs.close();
+			isOpen = false;
+			_line = result.str();
+			return;
+		}
+		else positionData._current_postion = ifs.tellg();
+		ifs.close();
+		isOpen = false;
 		saveLinePosData();
 		_line = result.str();
+	}
+
+	void smCompression::ReadByIndex(string& _line, const u64& _index, char _endLine)
+	{
+		oss result;
+		u64 index = 0;
+		std::ifstream ifs(path, std::ios::binary);
+
+		isOpen = true;
+		ifs.seekg(-1 * sizeof(frequencyTable), std::ios::end);
+		ifs.read((char*) frequencyTable, sizeof(frequencyTable));
+		generateLeafList();
+		generateTree();
+
+		ifs.seekg(0);
+		ifs.read((char*)&positionData, sizeof(PosData));
+
+		if(_index >= positionData._max_line_index)
+		{
+			_line = "";
+			ifs.close();
+			isOpen = false;
+			return;
+		}
+
+		char tmp = 0x0;
+		u32 currentIndex = 0;
+		while(true)
+		{
+			tmp = decompressChar(ifs, tree);
+			if(currentIndex < _index)
+			{
+				if (tmp == _endLine) ++currentIndex;
+				continue;
+			}
+			if (tmp == _endLine || tmp == EOT) break;
+			result << tmp;
+		}
+		if (tmp == EOT)
+		{
+			positionData._current_postion = sizeof(PosData);
+			ifs.close();
+			isOpen = false;
+			saveLinePosData();
+			_line = result.str();
+			return;
+		}
+		else positionData._current_postion = ifs.tellg();
+		
+		ifs.close();
+		isOpen = false;
+		saveLinePosData();
+		_line = result.str();
+	}
+
+	void smCompression::End()
+	{
+		registry.remove<smCompression>(entity);
 	}
 
 
@@ -349,11 +419,7 @@ namespace SM2K
 			Node* tmp1 = queue.top();
 			queue.pop();
 
-			Node* newNode = new Node(-1, tmp0->frequency + tmp1->frequency, tmp0, tmp1);
-			tmp0->parent = newNode;
-			tmp1->parent = newNode;
-			queue.emplace(newNode);
-
+			queue.emplace(tmp0->parent = tmp1->parent = new Node(-1, tmp0->frequency + tmp1->frequency, tmp0, tmp1));
 		}
 		if(!queue.empty())
 		{
@@ -387,7 +453,7 @@ namespace SM2K
 
 	void smCompression::saveLinePosData()
 	{
-		std::ofstream ofs(path, std::ios::binary);
+		std::fstream ofs(path, std::ios::binary | std::ios::out | std::ios::in);
 		ofs.seekp(0);
 		ofs.write((char*)&positionData, sizeof(PosData));
 		ofs.close();
@@ -396,7 +462,7 @@ namespace SM2K
 
 	void smCompression::loadLinePosData()
 	{
-		std::ifstream ifs(path, std::ios::binary);
+		std::ifstream ifs(path, std::ios::binary | std::ios::in);
 		ifs.seekg(0);
 		ifs.read((char*)&positionData, sizeof(PosData));
 		ifs.close();

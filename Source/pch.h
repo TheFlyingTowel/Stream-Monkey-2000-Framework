@@ -46,3 +46,4 @@
 #include "headers/SM2K_CMDS.inl"
 #include "headers/Exception.h"
 #include "headers/Signal.h"
+#include "headers/BitStream.h"
