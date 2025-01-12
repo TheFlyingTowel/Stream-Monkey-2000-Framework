@@ -3,8 +3,20 @@
 
 //#define GATEWARE_DISABLE_GVULKANSURFACE
 
+
+
+
 namespace SM2K 
 {
+
+#define US (u8) 0x1F
+#define S_US string((char) 0x1F)
+#define EXT (u8) 0x03
+#define S_EXT string((char) 0x03)
+#define EOT (u8) 0x04
+#define S_EOT string((char) 0x04)
+#define NL (u8) 0x0A
+#define S_NL string((char) 0x0A)
 
 	mutex print_mutex;
 		
@@ -147,6 +159,247 @@ namespace SM2K
 		CONNECT_ON_CONSTRUCT(Core_layer::_Log, Construct_Log);
 		CONNECT_ON_UPDATE(Core_layer::_Log, Update_Log);
 		CONNECT_ON_DESTROY(Core_layer::_Log, Destroy_Log);
+	}
+
+
+	void smCompression::generateFrequencyTable(vector(string) _data)
+	{
+		memset(frequencyTable, 0x0, 256 * sizeof(u32));
+		s32 n = 0;
+		while (!_data.empty())
+		{
+			string line = _data[n];
+			while (!line.empty())
+			{
+				++frequencyTable[(u8)line[0]];
+				line.erase(0, 1);
+			}
+		}
+
+	}
+
+	std::ofstream& smCompression::bv_out(std::ofstream& _out, std::vector<bool>& _bits)
+	{
+		for (auto bit : _bits)
+		{
+			if (bit)
+				bit_buffer |= 1 << bit_index;
+			--bit_index;
+
+			if (bit_index < 0)
+			{
+				_out.write(&bit_buffer, 1);
+				bit_buffer = 0x0;
+				bit_index = 7;
+			}
+
+		}
+		return _out;
+	}
+	std::ifstream& smCompression::bv_in(std::ifstream& _in, bool& _bit)
+	{
+		if(bit_index < 0)
+		{
+			bit_index = 7;
+			_in.read(&bit_buffer, 1);
+		}
+
+		_bit = !!(bit_buffer & (1 << bit_index--));
+		return _in;
+	}
+
+	void smCompression::CompressByLine(const vector(string)& _lines, const u8 _endLine)
+	{
+		data.str("");
+		generateFrequencyTable(_lines);
+		frequencyTable[_endLine] = _lines.size();
+		++frequencyTable[EOT];
+		generateLeafList();
+		generateTree();
+		generateEncodingTable();
+
+		std::ofstream ofs(path, std::ios::binary);
+		ofs.seekp(0);
+		PosData pos(sizeof(PosData));
+		ofs.write((char*)&pos, sizeof(PosData));
+
+		u32 maxIndex = -1;
+		for(string line : _lines)
+		{
+			for (s32 i = 0; i < line.length(); ++i)
+				bv_out(ofs, encodingTable[(u8)line[i]]);
+			bv_out(ofs, encodingTable[(u8)_endLine]);
+			++maxIndex;
+		}
+		bv_out(ofs, encodingTable[(u8)EOT]);
+		++maxIndex;
+		ofs.flush();
+
+		ofs.write((char*)frequencyTable, sizeof(u32) * 256);
+		ofs.close();
+		pos._max_line_index = maxIndex;
+		positionData = pos;
+		saveLinePosData();
+	}
+
+	void smCompression::ReadByLine(string& _line, const char& _endLine)
+	{
+		oss result;
+		std::ifstream ifs(path, std::ios::binary);
+		int index = 0;
+
+		ifs.seekg(-1 * sizeof(frequencyTable), std::ios::end);
+		ifs.read((char*)frequencyTable, sizeof(frequencyTable));
+		generateLeafList();
+		generateTree();
+
+		loadLinePosData();
+		ifs.seekg(positionData._current_postion);
+		index = positionData._current_index;
+
+		if(positionData._current_postion != sizeof(PosData))
+		{
+			char tmp = 0;
+			while(ifs.tellg() <= positionData._current_postion)
+			{
+				tmp = decompressChar(ifs, tree);
+			}
+			if (tmp == _endLine) decompressChar(ifs, tree);
+			else if(tmp == EOT)
+			{
+				result.str("");
+				positionData._current_postion = sizeof(PosData);
+				positionData._current_index = -1;
+				ifs.close();
+				saveLinePosData();
+				_line = result.str();
+				return;
+			}
+		}
+		else
+		{
+			ifs.seekg(positionData._current_postion);
+			bit_index = (positionData._current_index);
+		}
+		char tmp = 0x0;
+		while(true)
+		{
+			tmp = decompressChar(ifs, tree);
+
+
+			if (tmp == EOT || tmp == _endLine) break;
+			positionData._current_index = ++index;
+			positionData._current_postion = ifs.tellg();
+			result << tmp;
+		}
+
+
+		saveLinePosData();
+		_line = result.str();
+	}
+
+
+	char smCompression::decompressChar(std::ifstream& _stream, Node* _node)
+	{
+		
+		while (_node->value == -1)
+		{
+			bool tmp;
+			bv_in(_stream, tmp);
+			if (tmp) _node = _node->right;
+			else _node = _node->left;
+		}
+
+
+		return _node->value;
+	}
+
+	void smCompression::_clear()
+	{
+		_clear(tree);
+		tree = nullptr;
+	}
+
+	void smCompression::_clear(Node* _node)
+	{
+		if (!_node) return;
+		_clear(_node->left);
+		_clear(_node->right);
+		delete _node;
+	}
+
+	void smCompression::generateLeafList()
+	{
+		leafList.clear();
+		for (u16 ndx = 0; ndx < 256; ++ndx)
+			if (frequencyTable[ndx])
+				leafList.emplace_back(new Node(ndx, frequencyTable[ndx]));
+	}
+
+	void smCompression::generateTree()
+	{
+		std::priority_queue<Node*, std::vector<Node*>, NodeCompare> queue;
+		for (auto& node : leafList) queue.emplace(node);
+
+		while(queue.size() > 1)
+		{
+			Node* tmp0 = queue.top();
+			queue.pop();
+			
+			Node* tmp1 = queue.top();
+			queue.pop();
+
+			Node* newNode = new Node(-1, tmp0->frequency + tmp1->frequency, tmp0, tmp1);
+			tmp0->parent = newNode;
+			tmp1->parent = newNode;
+			queue.emplace(newNode);
+
+		}
+		if(!queue.empty())
+		{
+			tree = queue.top();
+			queue.pop();
+		}
+	}
+
+	void smCompression::generateEncodingTable()
+	{
+		for(auto& node : leafList)
+		{
+			vector(bool)& encodingValue = encodingTable[node->value];
+			Node* current = node;
+			while(current != tree)
+			{
+				Node* parent = current->parent;
+				encodingValue.emplace_back(current == parent->right);
+				current = parent;
+			}
+			std::reverse(encodingValue.begin(), encodingValue.end());
+		}
+	}
+
+
+
+	void smCompression::saveHeader()
+	{
+		data.write((char*)frequencyTable, 256 * sizeof(u32));// Stores the headers at the end of the buffer.
+	}
+
+	void smCompression::saveLinePosData()
+	{
+		std::ofstream ofs(path, std::ios::binary);
+		ofs.seekp(0);
+		ofs.write((char*)&positionData, sizeof(PosData));
+		ofs.close();
+
+	}
+
+	void smCompression::loadLinePosData()
+	{
+		std::ifstream ifs(path, std::ios::binary);
+		ifs.seekg(0);
+		ifs.read((char*)&positionData, sizeof(PosData));
+		ifs.close();
 	}
 
 }

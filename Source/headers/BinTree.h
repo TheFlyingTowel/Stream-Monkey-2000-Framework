@@ -48,8 +48,6 @@ namespace SM2K
 			}
 		}	
 
-	private:
-
 		struct Node
 		{
 			bool deleted;
@@ -58,6 +56,8 @@ namespace SM2K
 			T data;
 		};
 
+
+	private:
 		Node* root = nullptr;
 		size_t count = 0;
 

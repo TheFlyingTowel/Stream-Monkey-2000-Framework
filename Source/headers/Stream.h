@@ -20,6 +20,9 @@ namespace SM2K
 	
 	
 	// Command Tags //
+	COMPONENT(Source) { string source; };
+	COMPONENT(SourceCollection) { vector(_ID) collection; };
+
 	COMPONENT(CloseStream) { string name; };
 	COMPONENT(RebootStream) { string name; };
 	COMPONENT(OpenStream) { string name; };

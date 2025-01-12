@@ -52,10 +52,13 @@ namespace SM2K
 	typedef entt::entity				_Entity;
 	typedef _Entity						ProcessID;
 	typedef _Entity						ProcessPoolID;
+	typedef _Entity						_ID;
 
 
 	using ComponentFunc = std::function<void(_Registry&)>;
 	using _Scheduler	= entt::basic_scheduler<_Registry*>;
+	using oss = std::ostringstream;
+	using iss = std::istringstream;
 
 	struct _REGENT
 	{
