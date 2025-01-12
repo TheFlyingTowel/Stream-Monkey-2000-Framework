@@ -6,7 +6,7 @@
 
 
 
-namespace SM2K 
+namespace SM2K
 {
 
 #define US (u8) 0x1F
@@ -19,7 +19,7 @@ namespace SM2K
 #define S_NL string((char) 0x0A)
 
 	mutex print_mutex;
-		
+
 	FileDirectory::FileDirectory(const string& _file, bool format)
 	{
 		size_t ndx = _file.rfind(format ? '\\' : '/');
@@ -28,7 +28,7 @@ namespace SM2K
 
 	};
 
-	
+
 
 	u64 GetEarilestSetBitIndex64(const u64& buffer)
 	{
@@ -123,13 +123,13 @@ namespace SM2K
 	{
 		auto entitiesWithMsg = _registry.view<Core_layer::_Message>();
 		auto& logger = GET(Core_layer::_Log, e); // Get the logger we are going to print to.
-		
+
 
 		for (auto& entity : entitiesWithMsg)
 		{
 
 			auto& msg = GET(Core_layer::_Message, entity); // Get the message to print.
-			
+
 
 			if (msg.contex.empty())
 			{
@@ -142,16 +142,16 @@ namespace SM2K
 				logger.logFile.LogCategorized(msg.contex.c_str(), msg.msg.c_str());
 			}
 
-			_registry.remove<Core_layer::_Message>(entity); // Remove message component from the entity. 
+			_registry.remove<Core_layer::_Message>(entity); // Remove message component from the entity.
 		}
 	}
-	void Destroy_Log(_Registry& _registry, _Entity e) 
+	void Destroy_Log(_Registry& _registry, _Entity e)
 	{
 		auto& logger = GET(Core_layer::_Log, e);
-		
+
 		logger.log.Flush();
 		logger.logFile.Flush();
-		
+
 	}
 
 	CONNECT_COMPONENT()
@@ -301,7 +301,7 @@ namespace SM2K
 
 	char smCompression::decompressChar(std::ifstream& _stream, Node* _node)
 	{
-		
+
 		while (_node->value == -1)
 		{
 			bool tmp;
@@ -345,7 +345,7 @@ namespace SM2K
 		{
 			Node* tmp0 = queue.top();
 			queue.pop();
-			
+
 			Node* tmp1 = queue.top();
 			queue.pop();
 

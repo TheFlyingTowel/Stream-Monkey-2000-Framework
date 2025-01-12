@@ -50,10 +50,10 @@ namespace SM2K
 
 		struct Node
 		{
-			bool deleted;
 			Node* left = nullptr;
 			Node* right = nullptr;
 			T data;
+			bool deleted;
 		};
 
 
