@@ -48,7 +48,7 @@ namespace SM2K
 #define CGET(_type) GET(_type, GGET(_Entity))
 #define DELETE(_type, _entity) EXPAND(REGISTRY).remove<_type>(_entity) 
 #define GRAB_ALL(...) EXPAND(REGISTRY).view<__VA_ARGS__>() 
-#define GRAB(...) EXPAND(REGISTRY).view<__VA_ARGS__>()[0] 
+#define GRAB(...) *(EXPAND(REGISTRY).view<__VA_ARGS__>().begin()) 
 #define GRAB_AT(_index, ...) EXPAND(REGISTRY).view<__VA_ARGS__>()[_index] 
 #define ADD(_type, ...) EXPAND(REGISTRY).emplace<_type>(__VA_ARGS__) 
 #define REMOVE(_entity, ...) EXPAND(REGISTRY).remove<__VA_ARGS__>(_entity) 

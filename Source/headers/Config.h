@@ -11,7 +11,7 @@ namespace SM2K
 		void Load(const string& _file);
 		void Save(const string& _file);
 	private:
-
+		bool local;
 		void generateDefaultFile(const string& _file);
 	};
 }

@@ -88,7 +88,7 @@ namespace SM2K
 		
 		Node* tree = nullptr;
 		
-		char bit_buffer = 0x0;
+		u8 bit_buffer = 0x0;
 		char bit_index = 7;
 
 		void _clear();
@@ -112,5 +112,20 @@ namespace SM2K
 		FileDirectory(const string& _file, bool format = false);
 
 	};
+
+
+
+	void Trim(string& _str, const string& _trim);
+
+
+
+	string App_SysCmd(const vector(string)& _cmd);
+	s32 EXE_SysCmd(const string& _cmd);
+	s32 EXE_SysCmd(const vector(string)& _cmd);
+	void EXE_SysCmdReadOut(const vector(string)& _cmd, string& _out);
+	void EXE_SysCmdReadOut(const string& _cmd, string& _out);
+
+
+	string GetAppDataFolder();
 
 };

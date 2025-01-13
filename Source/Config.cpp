@@ -5,6 +5,7 @@ namespace SM2K
 {
 
 	_Config::_Config(_REGENT _reg, bool _localConfig)
+		:local{_localConfig}
 	{
 		if (!_reg.registry || _localConfig) return; // If we are returning here there is a problem.(It shouldn't get this far)
 
@@ -44,7 +45,7 @@ namespace SM2K
 
 	_Config::~_Config()
 	{
-		this->save("./core.ini");
+		if(!local) this->save("./core.ini");
 	}
 
 	void _Config::Load(const string& _file)

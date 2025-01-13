@@ -86,15 +86,7 @@ namespace SM2K
 			Print(_REGENT{&_registry, e}, "Initalized stream scheduler.", GetContex("Core", &self));
 			
 			
-			ADD(FilePath, e).path = "./data/testCompression.txt";
-			auto& com = ADD(smCompression, e, _registry, e);
 			
-			string read;
-			//com.CompressByLine({ "Teast0","test2","test3","test11","test100"});
-			com.ReadByLine(read, 0);
-			
-
-			com.End();
 		}
 
 

@@ -63,6 +63,9 @@
     <ClCompile Include="..\Source\StreamMonkey2K_fw.cpp">
       <Filter>Source Files\main_test</Filter>
     </ClCompile>
+    <ClCompile Include="..\Source\BitStream.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Source\headers\BaseCmd.h">
@@ -118,6 +121,9 @@
     </ClInclude>
     <ClInclude Include="..\Source\headers\StreamMonkey2K_fw.h">
       <Filter>Header Files\out_header</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\headers\BitStream.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

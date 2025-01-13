@@ -78,6 +78,7 @@ namespace SM2K
 	{
 		return _name + " @ " + PtrToString(_ptr);
 	}
+	
 	void Print(_REGENT _reg, string _msg, const string& _contex)
 	{
 		lockGaurd _lock(print_mutex);
@@ -97,6 +98,8 @@ namespace SM2K
 		screenLog.EnableConsoleLogging(_state);
 	}
 
+
+#pragma region Log
 
 	void Construct_Log(_Registry& _registry, _Entity e)
 	{
@@ -118,7 +121,6 @@ namespace SM2K
 
 
 	}
-
 	void Update_Log(_Registry& _registry, _Entity e)
 	{
 		auto entitiesWithMsg = _registry.view<Core_layer::_Message>();
@@ -160,8 +162,9 @@ namespace SM2K
 		CONNECT_ON_UPDATE(Core_layer::_Log, Update_Log);
 		CONNECT_ON_DESTROY(Core_layer::_Log, Destroy_Log);
 	}
+#pragma endregion
 
-
+#pragma region Compression
 	void smCompression::generateFrequencyTable(vector(string) _data)
 	{
 		memset(frequencyTable, 0x0, 256 * sizeof(u32));
@@ -189,7 +192,7 @@ namespace SM2K
 
 			if (bit_index < 0)
 			{
-				_out.write(&bit_buffer, 1);
+				_out.write((char*) &bit_buffer, 1);
 				bit_buffer = 0x0;
 				bit_index = 7;
 			}
@@ -202,10 +205,11 @@ namespace SM2K
 		if(bit_index < 0)
 		{
 			bit_index = 7;
-			_in.read(&bit_buffer, 1);
+			_in.read((char*) &bit_buffer, 1);
 		}
 
-		_bit = !!(bit_buffer & (1 << bit_index--));
+		_bit = !!(bit_buffer & (1 << bit_index));
+		--bit_index;
 		return _in;
 	}
 
@@ -368,7 +372,6 @@ namespace SM2K
 		registry.remove<smCompression>(entity);
 	}
 
-
 	char smCompression::decompressChar(std::ifstream& _stream, Node* _node)
 	{
 
@@ -444,8 +447,6 @@ namespace SM2K
 		}
 	}
 
-
-
 	void smCompression::saveHeader()
 	{
 		data.write((char*)frequencyTable, 256 * sizeof(u32));// Stores the headers at the end of the buffer.
@@ -466,6 +467,83 @@ namespace SM2K
 		ifs.seekg(0);
 		ifs.read((char*)&positionData, sizeof(PosData));
 		ifs.close();
+	}
+#pragma endregion
+
+
+
+	void Trim(string& _str, const string& _trim)
+	{
+		u64 pos;
+		while ((pos = _str.find(_trim)) != string::npos)
+		{
+			_str.erase(pos, _trim.length());
+		}
+	}
+
+	string App_SysCmd(const vector(string)& _cmd)
+	{
+		string result = "";
+		
+		for(auto& str : _cmd)
+			result.append(" " + str);
+		
+		return result;
+	}
+
+	s32 EXE_SysCmd(const string& _cmd)
+	{
+		return system(_cmd.c_str());
+	}
+
+	s32 EXE_SysCmd(const vector(string)& _cmd) 
+	{
+		return system(App_SysCmd(_cmd).c_str());
+	}
+
+	void EXE_SysCmdReadOut(const vector(string)& _cmd, string& _out)
+	{
+		
+		EXE_SysCmdReadOut(App_SysCmd(_cmd), _out);
+
+	}
+
+	void EXE_SysCmdReadOut(const string& _cmd, string& _out)
+	{
+		string data = "";
+		FILE* fileStream;
+		char buffer[128];
+
+		fileStream = _popen_(_cmd.c_str(), "r");
+		if(fileStream)
+		{
+			fflush(fileStream);
+			while(!feof(fileStream))
+			{
+				if (fgets(buffer, sizeof(fileStream), fileStream) != nullptr)
+					data.append(buffer);
+			}
+			_pclose_(fileStream);
+		}
+
+		if (data.empty())
+		{
+			oss str;
+			std::cout.flush();
+			std::cout.rdbuf(str.rdbuf());
+			data = str.str();
+		}
+
+		_out = data;
+
+	}
+
+	string GetAppDataFolder()
+	{
+		string out = "";
+		SM2K::EXE_SysCmdReadOut(SM2K_APPDATA_CMD, out);
+		SM2K::Trim(out, "\n");
+		return out;
 	}
 
 }
