@@ -67,6 +67,8 @@ namespace SM2K
 		if (!VerifyRegistry(registry)) return;
 		_Registry& _registry = *static_cast<_Registry*>(registry);
 		auto core = GGET(_Entity);
+		auto sch = _registry.create();
+		ADD(StreamScheduler, sch); // Creates and adds the stream scheduler.
 		ADD(CoreStart, core);
 		SIGNAL_UPDATE(Core, core);
 
@@ -84,6 +86,14 @@ namespace SM2K
 		ADD(NewStream, streamScheduler, stream);
 		SIGNAL_UPDATE(StreamScheduler, streamScheduler);
 
+	}
+
+	void StartStream(const sm2k& registry, const string& _name)
+	{
+		if (!VerifyRegistry(registry)) return;
+		_Registry& _registry = *static_cast<_Registry*>(registry);
+		auto streamRegistry = *_registry.view<StreamRegistry>().begin();
+		GET(StreamRegistry, streamRegistry).StartProcess(_name);
 	}
 
 	void ConfigureStream(const sm2k& registry, const string& _name, const string& _trackFile, const string& _type,
@@ -110,8 +120,11 @@ namespace SM2K
 		if (!VerifyRegistry(registry)) return;
 		_Registry& _registry = *static_cast<_Registry*>(registry);
 		auto core = GGET(_Entity);
+		auto sch = GRAB(StreamRegistry);
+		GET(StreamRegistry, sch).Stop(); // This will ensure the other threads end before everything gets deleted. 
 		ADD(CoreStop, core);
 		SIGNAL_UPDATE(Core, core);
+		_registry.destroy(sch);
 	}
 
 	void FreeRegistry(sm2k& registry)
@@ -160,6 +173,8 @@ int main(int argsc, char** args) // For Testing
 	sm2k test4 = nullptr;
 	sm2k test5 = nullptr;
 
+	std::cout << SM2K::GetAppDataFolder() << std::endl;
+
 	AllocateAndStartNewInstance(test, true);
 
 	AddStream(test, "Lobby");
@@ -170,6 +185,13 @@ int main(int argsc, char** args) // For Testing
 	ConfigureStream(test, "Test", "TestTrack", "LIVE");
 	ConfigureStream(test, "Wave", "WaveTrack", "LIVE");
 	ConfigureStream(test, "Ch0", "Ch0Track", "LIVE");
+
+	StartStream(test, "Lobby");
+
+
+
+
+
 
 	StopAndDestroyInstance(test);
 

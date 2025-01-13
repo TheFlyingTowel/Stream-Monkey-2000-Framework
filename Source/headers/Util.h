@@ -24,10 +24,9 @@ namespace SM2K
 	COMPONENT(PosData)
 	{
 		u64 _current_postion;
-		u64 _max_line_index;
-		u8 _bit_index;
-		u8 _bit_buffer;
-		PosData() : _current_postion{ 0 }, _max_line_index{ 0 }{}
+		u64 _max_line_index = 0;
+		s8 _bit_index = -1;
+		PosData() : _current_postion{ sizeof(PosData) }, _max_line_index{ 0 }{}
 		PosData(u64 _pos) : _current_postion{ _pos }, _max_line_index{ 0 } {}
 		//PosData(u64 _pos, s8 _ndx) : _current_postion{ _pos }, _max_line_index{ 0 }, _current_index{ _ndx } {}
 	};
@@ -69,6 +68,7 @@ namespace SM2K
 		{
 			_clear();
 		};
+		std::fstream& flush_out(std::fstream& _out);
 		std::fstream& bv_out(std::fstream& _out, std::vector<bool>& _bits);
 		std::ifstream& bv_in(std::ifstream& _in, bool& _bit);
 		void CompressByLine(const vector(string)& _lines, const u8 _endLine = '\n');
@@ -88,7 +88,7 @@ namespace SM2K
 		
 		Node* tree = nullptr;
 		
-		char bit_buffer = 0x0;
+		u8 bit_buffer = 0x0;
 		char bit_index = 7;
 
 		void _clear();
@@ -112,5 +112,20 @@ namespace SM2K
 		FileDirectory(const string& _file, bool format = false);
 
 	};
+
+
+
+	void Trim(string& _str, const string& _trim);
+
+
+
+	string App_SysCmd(const vector(string)& _cmd);
+	s32 EXE_SysCmd(const string& _cmd);
+	s32 EXE_SysCmd(const vector(string)& _cmd);
+	void EXE_SysCmdReadOut(const vector(string)& _cmd, string& _out);
+	void EXE_SysCmdReadOut(const string& _cmd, string& _out);
+
+
+	string GetAppDataFolder();
 
 };

@@ -47,8 +47,9 @@ namespace SM2K
 
 
 		Stream(const ProcessID & _id)
-			: id{ _id }
-		{}
+			:BaseProcess(_id)
+		{
+		}
 		~Stream() {};
 
 		void init(_Registry& _registry, const string& _name = "<Unnamed>")
@@ -119,21 +120,28 @@ namespace SM2K
 			Print({ registryRef, id }, "Registered \"" + self.name + "\" in core", GetContex("Core", this));
 		}
 
-		void update(_Registry*, sm2k)
+		void update(_Registry* registry, sm2k) override
 		{
 
-
+			_Registry& _registry = *registry;
 			//TODO: Add hls frame prossecing and time logic.
+			ADD(FilePath, id).path = "./data/testCompression.txt";
+			auto& com = ADD(smCompression, id, _registry, id);
+
+			string read;
+		//	com.CompressByLine({ "Padding","Teast0","test2","test3","test11","test100"});
+			com.ReadByLine(read);
 
 
-			//succeed();
+			com.End();
+
+			succeed();
 		}
 
 		bool IsConfigured() const { return isConfigured; }
 
 	private:
 		bool isConfigured = false;
-		ProcessID id;
 		_Registry* registryRef = nullptr;
 		GW::SYSTEM::GLog streamLog;
 

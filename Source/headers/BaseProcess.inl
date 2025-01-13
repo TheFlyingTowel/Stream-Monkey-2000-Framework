@@ -9,9 +9,13 @@ namespace SM2K
 	INN_PROCESS(BaseProcess, _Registry*)
 	{
 	public:
+		BaseProcess(ProcessID _id) 
+			: id{ _id } {}
 		virtual ~BaseProcess() = default;
-		virtual void configure() = 0;
-		virtual void update(_Type, sm2k _optional = nullptr) = 0;
+		virtual void configure() {};
+		virtual void update(_Type, sm2k _optional = nullptr) {};
+	protected:
+		ProcessID id;
 	};
 
 #define PROCESS(_name) class _name : public BaseProcess
@@ -51,7 +55,7 @@ namespace SM2K
 					cv.wait(_lock, [this] {return ready ; });
 					
 				}
-				Func task;
+				Func task; bool b;
 				while (true)
 				{
 					if (!task.process)
@@ -62,13 +66,14 @@ namespace SM2K
 						
 						task = move(tasks.front());
 						tasks.pop();
-						
+						task.process->tick(&_registry, task.data);
 					}
 					
-					if (task.process->alive())
+
+
+					if (task.process && task.process->alive())
 						task.process->tick(&_registry, task.data);
-					else if (task.process->finished() || task.process->rejected())
-						task.process = nullptr; // Move on if the process stopped.
+					else if(task.process->finished() || task.process->rejected())task.process = nullptr; // Move on if the process stopped.
 
 				}
 				});
@@ -155,17 +160,20 @@ namespace SM2K
 
 		inline virtual void Remove(const string& _name)
 		{
-
+			std::lock_guard<mutex> _lock(processRegistryMutex);
 			if (processes[_name]->alive())
 			{
+				
 				processes[_name]->abort(true);
 			}
-			processes.erase(_name);
-		}
 		
+			processes.erase(_name);
+			
+		}
 		
 		inline void StartProcess(const string& _name)
 		{
+			std::lock_guard<mutex> _lock(processRegistryMutex);
 			if (!Has(_name))
 			{
 				std::cout << "Couldn't find a process named \"" << _name << "\". Please add it with the 'Add' function";
@@ -178,9 +186,8 @@ namespace SM2K
 				return;
 			}
 
-			scheduler.attach<_Type>(*processes[_name]);
+			scheduler.attach<BaseProcess>(*static_cast<BaseProcess*>(&*processes[_name]));
 			pool->Add(processes[_name]);
-
 
 		}
 
@@ -223,7 +230,7 @@ namespace SM2K
 		std::unordered_map<string, Shared(_Type)> processes;
 		_Scheduler scheduler;
 		Shared(BaseProcessPool<_Type>) pool;
-
+		mutex processRegistryMutex;
 	};
 
 	

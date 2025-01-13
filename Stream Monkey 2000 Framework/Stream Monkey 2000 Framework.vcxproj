@@ -142,6 +142,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\Source\BaseCmd.cpp" />
+    <ClCompile Include="..\Source\BitStream.cpp" />
     <ClCompile Include="..\Source\Config.cpp" />
     <ClCompile Include="..\Source\Core.cpp" />
     <ClCompile Include="..\Source\Exception.cpp" />
@@ -159,6 +160,7 @@
   <ItemGroup>
     <ClInclude Include="..\Source\headers\BaseCmd.h" />
     <ClInclude Include="..\Source\headers\BinTree.h" />
+    <ClInclude Include="..\Source\headers\BitStream.h" />
     <ClInclude Include="..\Source\headers\Config.h" />
     <ClInclude Include="..\Source\headers\Core.h" />
     <ClInclude Include="..\Source\headers\CoreTypes.h" />

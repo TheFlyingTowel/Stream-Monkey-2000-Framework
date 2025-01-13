@@ -9,8 +9,21 @@
 #define GATEWARE_DISABLE_GDIRECTX11SURFACE
 #define GATEWARE_DISABLE_GDIRECTX12SURFACE
 
-
+#ifdef _WIN32
 #include <filesystem>
+#define _SM2K_FILESYSTEM std::filesystem
+#define _popen_ _popen
+#define _pclose_ _pclose
+#define SM2K_APPDATA_CMD "echo %APPDATA%"
+#else
+#include "filesystem"
+#define _SM2K_FILESYSTEM std::filesystem
+#define _popen_ popen
+#define _pclose_ pclose
+#define SM2K_APPDATA_CMD "echo $XDG_CONFIG_HOME"
+#endif // _WIN32
+
+
 #include <iostream>
 #include <string>
 #include <list>
