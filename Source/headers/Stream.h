@@ -5,20 +5,20 @@
 namespace SM2K
 {
 
-	
 
-	
+
+
 	enum class StreamType : u32
 	{
 		NONE = 0, LIVE, VOD
 	};
 
-	
+
 
 	// Tags //
 	TAG(StreamScheduler);
-	
-	
+
+
 	// Command Tags //
 	COMPONENT(Source) { string source; };
 	COMPONENT(SourceCollection) { vector(_ID) collection; };
@@ -57,7 +57,7 @@ namespace SM2K
 			registryRef = &_registry;
 			ADD(StreamInstance, id).name = _name;
 			isConfigured = false;
-			
+
 		}
 
 		void configure() override {};
@@ -75,7 +75,7 @@ namespace SM2K
 			self.trackFile = _trackFile;
 			self.type =  _type;
 
-			
+
 
 			isConfigured = true;
 
@@ -106,14 +106,14 @@ namespace SM2K
 
 			config.save(self.instancePath + self.name + ".ini");
 			registerWithCore();
-			
-			
+
+
 		}
 
-		void registerWithCore() 
+		void registerWithCore()
 		{
 			auto& self = registryRef->get<StreamInstance>(id);
-			auto& coreConfig = *(registryRef->get<Core_layer::smConfig>(registryRef->ctx().get<_Entity>()).config); 
+			auto& coreConfig = *(registryRef->get<Core_layer::smConfig>(registryRef->ctx().get<_Entity>()).config);
 
 			coreConfig["RegisteredStreams"][self.name] = self.instancePath + self.name + ".ini";
 			coreConfig.save("./core.ini");
@@ -152,10 +152,10 @@ namespace SM2K
 
 	// Registry //
 
-	PROCESS_REGISTRY(StreamRegistry, Stream) 
+	PROCESS_REGISTRY(StreamRegistry, Stream)
 	{
 	public:
-		StreamRegistry(_Registry& _registry, u32 _poolSize = 16) 
+		StreamRegistry(_Registry& _registry, u32 _poolSize = 16)
 			:BaseProcessRegistry(_registry, _poolSize)
 		{}
 

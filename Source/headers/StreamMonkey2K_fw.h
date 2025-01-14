@@ -39,6 +39,7 @@ namespace SM2K
 	extern "C" SM2K_FRAMEWORK_DLL void Start(const sm2k& _registry);
 	
 	extern "C" SM2K_FRAMEWORK_DLL void AddStream(const sm2k& _registry, const string& _name);
+	extern "C" SM2K_FRAMEWORK_DLL void StartStream(const sm2k& _registry, const string& _name);
 	extern "C" SM2K_FRAMEWORK_DLL void ConfigureStream(const sm2k& _registry, const string& _name, const string& _trackFileName, const string& _type, const string& _streamLogPath = "Log/", string* _statusObserver = nullptr);
 	extern "C" SM2K_FRAMEWORK_DLL void StartStream(const sm2k& _registry, const string& _name);
 	//TODO: Add stream stop function.

@@ -3,13 +3,13 @@
 
 #define SM2K_EXPORTS
 #include "pch.h"
-namespace SM2K 
+namespace SM2K
 {
 
 #define DEBUG_MEM_LEAK
 
 
-	namespace 
+	namespace
 	{
 		SM2K::BinTree<sm2k> registryVerify;
 
@@ -53,9 +53,9 @@ namespace SM2K
 		reg->ctx().emplace<_Entity>(core = reg->create());
 		reg->emplace<Core_layer::_EnableConsoleLogging>(core).enableConsoleLog = _enableConsoleLogging;
 		reg->emplace<Core>(core);
-		
+
 		//EnableConsoleLogging(*reg, _enableConsoleLogging);
-		
+
 		Print({ reg, core }, "A Stream Monkey 2000 registry was successfully allocated!", GetContex("Core", reg));
 
 		_registry = reg;
@@ -79,7 +79,7 @@ namespace SM2K
 		if (!VerifyRegistry(registry)) return;
 		_Registry& _registry = *static_cast<_Registry*>(registry);
 		const auto& streamScheduler = GRAB(StreamScheduler);
-		
+
 		NewStream stream;
 		stream.name = _name;
 
@@ -121,7 +121,7 @@ namespace SM2K
 		_Registry& _registry = *static_cast<_Registry*>(registry);
 		auto core = GGET(_Entity);
 		auto sch = GRAB(StreamRegistry);
-		GET(StreamRegistry, sch).Stop(); // This will ensure the other threads end before everything gets deleted. 
+		GET(StreamRegistry, sch).Stop(); // This will ensure the other threads end before everything gets deleted.
 		ADD(CoreStop, core);
 		SIGNAL_UPDATE(Core, core);
 		_registry.destroy(sch);
@@ -129,7 +129,7 @@ namespace SM2K
 
 	void FreeRegistry(sm2k& registry)
 	{
-		if (!VerifyRegistry(registry)) 
+		if (!VerifyRegistry(registry))
 		{
 			std::cout	<< "FreeRegistry" << " could not verify a registry @ " << PtrToString(registry)
 						<< ". This registry may have been deleted." << std::endl;
@@ -166,7 +166,7 @@ int main(int argsc, char** args) // For Testing
 
 
 
-	
+
 	sm2k test = nullptr;
 	sm2k test2 = nullptr;
 	sm2k test3 = nullptr;
@@ -230,7 +230,7 @@ int main(int argsc, char** args) // For Testing
 		"Howard", "Ward", "Torres", "Peterson", "Gray", "Ramirez", "Watson",
 		"Brooks", "Kelly", "Sanders", "Price", "Bennett", "Wood", "Barnes", "Ross",
 		"Henderson", "Coleman", "Jenkins", "Perry", "Powell", "Long", "Patterson", "Hughes",
-		"Flores", "Washington", "Butler", "Simmons", "Foster", "Gonzales", "Bryant", 
+		"Flores", "Washington", "Butler", "Simmons", "Foster", "Gonzales", "Bryant",
 		"Russell", "Griffin", "Diaz", "Hayes", "Myers", "Ford", "Hamilton", "Graham"
 	};
 
@@ -248,7 +248,7 @@ int main(int argsc, char** args) // For Testing
 
 		hashes[hash].count += 1;
 
-		if (hashes[hash].count > 1) 
+		if (hashes[hash].count > 1)
 		{
 
 			std::cout << "\nCorrent Name:\t" << s << "\n";
