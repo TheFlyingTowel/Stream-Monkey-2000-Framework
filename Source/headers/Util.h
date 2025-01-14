@@ -123,6 +123,8 @@ namespace SM2K
 
 		void saveLinePosData();
 		void loadLinePosData();
+
+		void saveMetaData(ini::IniFile& out, oss& data);
 	};
 
 	

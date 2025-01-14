@@ -130,8 +130,8 @@ namespace SM2K
 			auto& com = ADD(_Compression, id, _registry, id);
 
 			string read = "~";
-			com.CompressByLineConfig({ "Padding","Teast0","test2","test3","test11","test100" });
-			//com.ReadByLineConfig(read);
+			//com.CompressByLine({ "Padding","Teast0","test2","test3","test11","test100" });
+			com.ReadByLine(read);
 			std::cout << read << std::endl;
 
 			com.End();

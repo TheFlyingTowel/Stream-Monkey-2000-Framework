@@ -417,7 +417,31 @@ namespace SM2K
 	void _Compression::CompressByLineConfig(const vector(string)& _lines, const u8 _endLine)
 	{
 		oss data("", std::ios::binary);
+		ini::IniFile out;
+		u64 bufferPos = 0;
+		if (registry.any_of<ShowCompressConfig>(entity))
+		{
 
+			auto& name = registry.get<ShowCompressConfig>(entity).name;
+
+			out["ShowMetaData"]["name"] = name;
+			out["ShowMetaData"]["sourceCount"] = (u32) _lines.size();
+			out["ShowMetaData"]["totalTimeLength"] = -1;
+			out["BufferOffset"]["offset"] = 0;
+
+			saveMetaData(out, data);
+			{
+				std::ifstream ifs(path, std::ios::binary);
+				ifs.seekg(-1, std::ios::end);
+				out["BufferOffset"]["offset"] = (u32) (bufferPos = (u32)ifs.tellg() + std::strlen(SM2K_END_OF_CONFIG));
+				ifs.close();
+			}
+			saveMetaData(out, data);
+
+		}
+		
+		std::fstream ofs(path, std::ios::binary | std::ios::in | std::ios::out);
+		
 		if (!isOpen)
 		{
 			generateFrequencyTable(_lines);
@@ -428,44 +452,32 @@ namespace SM2K
 			generateEncodingTable();
 			isOpen = true;
 		}
-		data.seekp(0);
+		ofs.seekp(-1 , std::ios::end);
 		PosData pos{ sizeof(PosData) };
-		data.write((char*)&pos, sizeof(PosData));
+		ofs.write((char*)&pos, sizeof(PosData));
 
 
 		u32 maxIndex = -1;
 		for (string line : _lines)
 		{
 			for (s32 i = 0; i < line.length(); ++i)
-				bv_out_oss(data, encodingTable[(u8)line[i]]);
-			bv_out_oss(data, encodingTable[(u8)_endLine]);
+				bv_out(ofs, encodingTable[(u8)line[i]]);
+			bv_out(ofs, encodingTable[(u8)_endLine]);
 			++maxIndex;
 		}
-		bv_out_oss(data, encodingTable[(u8)EOT]);
-		flush_out_oss(data);
+		bv_out(ofs, encodingTable[(u8)EOT]);
+		flush_out(ofs);
 		++maxIndex;
 
-		data.write((char*)frequencyTable, sizeof(frequencyTable));
+		ofs.write((char*)frequencyTable, sizeof(frequencyTable));
 		
 		pos._max_line_index = maxIndex;
+		pos._current_postion = bufferPos;
 		positionData = pos;
-		data.seekp(0);
-		data.write((char*)&pos, sizeof(PosData));
+		ofs.seekp(bufferPos);
+		ofs.write((char*)&pos, sizeof(PosData));
 
-		if(registry.any_of<ShowCompressConfig>(entity))
-		{
-			ini::IniFile out;
-			if(registry.all_of<ShowCompressConfig>(entity))
-			{
-				auto& name = registry.get<ShowCompressConfig>(entity).name;
-				out["ShowConfig"]["name"] = name;
-				out["ShowConfig"]["sourceCount"] = maxIndex;
-				out["ShowConfig"]["totalTimeLength"] = -1;
-				out["DataBuffer"]["buffer"] = data.str();
-			}
-
-			out.save(path);
-		}
+		ofs.close();
 
 	}
 
@@ -475,7 +487,9 @@ namespace SM2K
 		out.load(path);
 		oss result;
 		oss data("", std::ios::binary);
-		iss in(out.at("DataBuffer").at("buffer").as<string>(), std::ios::binary);
+		u32 bufferPosition = out.at("BufferOffset").at("offset").as<u32>();
+		std::ifstream in(path, std::ios::binary);
+
 		if (!isOpen)
 		{
 			in.seekg(-1 * sizeof(frequencyTable), std::ios::end);
@@ -485,7 +499,7 @@ namespace SM2K
 			isOpen = true;
 		}
 
-		in.seekg(0);
+		in.seekg(bufferPosition);
 		in.read((char*)&positionData, sizeof(positionData));
 		in.seekg(positionData._current_postion);
 		bit_index = positionData._bit_index;
@@ -505,17 +519,15 @@ namespace SM2K
 		if (tmp == EOT)
 		{
 			result.str("");
-			positionData._current_postion = sizeof(PosData);
+			positionData._current_postion = bufferPosition;
 			positionData._bit_buffer = 0;
 			positionData._bit_index = -1;
-			
-			data.str(in.str());
-			
-			data.seekp(0);
-			data.write((char*)&positionData, sizeof(positionData));
+			in.close();
 
-			out["DataBuffer"]["buffer"] = data.str();
-			out.save(path);
+			std::fstream fs(path, std::ios::binary | std::ios::in | std::ios::out);
+
+			fs.seekp(bufferPosition);
+			fs.write((char*)&positionData, sizeof(positionData));
 			_line = result.str();
 			return;
 		}
@@ -524,13 +536,14 @@ namespace SM2K
 
 		positionData._bit_index = bit_index;
 		positionData._bit_buffer = bit_buffer;
-		data.str(in.str());
+		//data.str(in.str());
 
-		data.seekp(0);
-		data.write((char*)&positionData, sizeof(positionData));
+		in.close();
 
-		out["DataBuffer"]["buffer"] = data.str();
-		out.save(path);
+		std::fstream fs(path, std::ios::binary | std::ios::in | std::ios::out);
+
+		fs.seekp(bufferPosition);
+		fs.write((char*)&positionData, sizeof(positionData));
 		_line = result.str();
 	}
 
@@ -659,6 +672,16 @@ namespace SM2K
 		ifs.read((char*)&positionData, sizeof(PosData));
 		ifs.close();
 	}
+	void _Compression::saveMetaData(ini::IniFile& out, oss& data)
+	{
+		out.save(path);
+		{
+			std::ofstream ofs(path, std::ios::binary | std::ios::app);
+			ofs << SM2K_END_OF_CONFIG << data.str();
+			ofs.close();
+		}
+	}
+
 #pragma endregion
 
 

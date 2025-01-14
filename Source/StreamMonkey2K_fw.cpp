@@ -78,7 +78,7 @@ namespace SM2K
 	{
 		if (!VerifyRegistry(registry)) return;
 		_Registry& _registry = *static_cast<_Registry*>(registry);
-		const auto& streamScheduler = GRAB(StreamScheduler);
+		const auto& streamScheduler = GRAB(StreamScheduler); // TODO: Use a global "StreamScheduler" entity container to avoid vector iterator problems.
 
 		NewStream stream;
 		stream.name = _name;

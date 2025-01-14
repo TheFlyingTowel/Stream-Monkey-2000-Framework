@@ -22,8 +22,13 @@
 #define _pclose_ pclose
 #define SM2K_APPDATA_CMD "echo $XDG_CONFIG_HOME"
 #endif // _WIN32
-
-#define SM2K_END_OF_CONFIG "[END_OF_CONFIG]\n"
+#define X(x) #x
+#define _S(a) X(#a)
+#define __S(a) X(a)
+#define S(a) _S(a)
+#define __SM2K_END_OF_CONFIG [BUFFER_START]
+#define _SM2K_END_OF_CONFIG __S(__SM2K_END_OF_CONFIG)
+#define SM2K_END_OF_CONFIG  S(__SM2K_END_OF_CONFIG ## \n\n)
 
 #include <iostream>
 #include <string>
