@@ -26,6 +26,7 @@ namespace SM2K
 		u64 _current_postion;
 		u64 _max_line_index = 0;
 		s8 _bit_index = -1;
+		u8 _bit_buffer = 0x0;
 		PosData() : _current_postion{ sizeof(PosData) }, _max_line_index{ 0 }{}
 		PosData(u64 _pos) : _current_postion{ _pos }, _max_line_index{ 0 } {}
 		//PosData(u64 _pos, s8 _ndx) : _current_postion{ _pos }, _max_line_index{ 0 }, _current_index{ _ndx } {}
@@ -62,6 +63,7 @@ namespace SM2K
 		smCompression(_Registry& _registry, _Entity e)
 			: registry{_registry}, entity{e}, path{GET(FilePath, e).path}
 		{
+			isOpen = false;
 			DELETE(FilePath, e);
 		};
 		~smCompression() 
@@ -81,7 +83,7 @@ namespace SM2K
 		_Entity entity;
 		string path;
 		oss data;
-		u32 frequencyTable[256]{ 0x0 };
+		u32 frequencyTable[256]{0};
 		vector(Node*) leafList;
 		vector(bool) encodingTable[256];
 		PosData positionData;
@@ -90,6 +92,8 @@ namespace SM2K
 		
 		u8 bit_buffer = 0x0;
 		char bit_index = 7;
+
+
 
 		void _clear();
 		void _clear(Node* _node);

@@ -167,7 +167,7 @@ namespace SM2K
 #pragma region Compression
 	void smCompression::generateFrequencyTable(vector(string) _data)
 	{
-		memset(frequencyTable, 0x0, 256 * sizeof(u32));
+		memset(frequencyTable, 0x0, sizeof(frequencyTable));
 		
 		while (!_data.empty())
 		{
@@ -224,15 +224,22 @@ namespace SM2K
 	void smCompression::CompressByLine(const vector(string)& _lines, const u8 _endLine)
 	{
 		data.str("");
-		generateFrequencyTable(_lines);
-		frequencyTable[_endLine] = _lines.size();
-		++frequencyTable[EOT];
-		generateLeafList();
-		generateTree();
-		generateEncodingTable();
-		std::ofstream t(path, std::ios::binary);t.close();
+		if (!isOpen)
+		{
+			generateFrequencyTable(_lines);
+			frequencyTable[_endLine] = _lines.size();
+			++frequencyTable[EOT];
+			generateLeafList();
+			generateTree();
+			generateEncodingTable();
+			{
+				std::ofstream(path, std::ios::binary).close(); // creates the file if it doesn't exixt already.
+			}
+			isOpen = true;
+		}
+
 		std::fstream ofs(path, std::ios::binary | std::ios::out | std::ios::in);
-		isOpen = true;
+		
 		ofs.seekp(0);
 		PosData pos{ sizeof(PosData)};
 		ofs.write((char*)&pos, sizeof(PosData));
@@ -251,7 +258,7 @@ namespace SM2K
 
 		ofs.write((char*)frequencyTable, sizeof(frequencyTable));
 		ofs.close();
-		isOpen = false;
+		
 		pos._max_line_index = maxIndex;
 		positionData = pos;
 		saveLinePosData();
@@ -261,16 +268,19 @@ namespace SM2K
 	{
 		oss result;
 		std::ifstream ifs(path, std::ios::binary);
-		isOpen = ifs.is_open();
-		ifs.seekg(-1 * sizeof(frequencyTable), std::ios::end);
-		ifs.read((char*)frequencyTable, sizeof(frequencyTable));
-		generateLeafList();
-		generateTree();
+		if(!isOpen)
+		{
+			ifs.seekg(-1 * sizeof(frequencyTable), std::ios::end);
+			ifs.read((char*)frequencyTable, sizeof(frequencyTable));
+			generateLeafList();
+			generateTree();
+			isOpen = true;
+		}
 
 		loadLinePosData();
 		ifs.seekg(positionData._current_postion);
 		bit_index = positionData._bit_index;
-
+		bit_buffer = positionData._bit_buffer;
 
 		char tmp = 0x0;
 		while(true)
@@ -287,15 +297,19 @@ namespace SM2K
 		{
 			result.str("");
 			positionData._current_postion = sizeof(PosData);
+			positionData._bit_buffer = 0;
+			positionData._bit_index = -1;
 			ifs.close();
-			isOpen = false;
+			
+			saveLinePosData();
 			_line = result.str();
 			return;
 		}
 		else positionData._current_postion = ifs.tellg();
 		ifs.close();
-		isOpen = false;
+		
 		positionData._bit_index = bit_index;
+		positionData._bit_buffer = bit_buffer;
 		saveLinePosData();
 		_line = result.str();
 	}
@@ -305,12 +319,15 @@ namespace SM2K
 		oss result;
 		u64 index = 0;
 		std::ifstream ifs(path, std::ios::binary);
-
-		isOpen = true;
-		ifs.seekg(-1 * sizeof(frequencyTable), std::ios::end);
-		ifs.read((char*) frequencyTable, sizeof(frequencyTable));
-		generateLeafList();
-		generateTree();
+		
+		if(!isOpen)
+		{
+			isOpen = true;
+			ifs.seekg(-1 * sizeof(frequencyTable), std::ios::end);
+			ifs.read((char*)frequencyTable, sizeof(frequencyTable));
+			generateLeafList();
+			generateTree();
+		}
 
 		ifs.seekg(0);
 		ifs.read((char*)&positionData, sizeof(PosData));
@@ -319,12 +336,13 @@ namespace SM2K
 		{
 			_line = "";
 			ifs.close();
-			isOpen = false;
 			return;
 		}
 
 		char tmp = 0x0;
 		u32 currentIndex = 0;
+		bit_index = -1;
+		bit_buffer = 0x0;
 		while(true)
 		{
 			tmp = decompressChar(ifs, tree);
@@ -340,7 +358,6 @@ namespace SM2K
 		{
 			positionData._current_postion = sizeof(PosData);
 			ifs.close();
-			isOpen = false;
 			saveLinePosData();
 			_line = result.str();
 			return;
@@ -348,13 +365,18 @@ namespace SM2K
 		else positionData._current_postion = ifs.tellg();
 		
 		ifs.close();
-		isOpen = false;
 		saveLinePosData();
 		_line = result.str();
 	}
 
 	void smCompression::End()
 	{
+		isOpen = false;
+		memset(frequencyTable, 0x0, sizeof(frequencyTable));
+		memset(&positionData, 0x0, sizeof(positionData));
+		leafList.clear();
+		for (int i = 0; i < 256; ++i)
+			encodingTable[i].clear();
 		registry.remove<smCompression>(entity);
 	}
 
@@ -392,13 +414,13 @@ namespace SM2K
 		leafList.clear();
 		for (u16 ndx = 0; ndx < 256; ++ndx)
 			if (frequencyTable[ndx])
-				leafList.emplace_back(new Node(ndx, frequencyTable[ndx]));
+				leafList.push_back(new Node(ndx, frequencyTable[ndx]));
 	}
 
 	void smCompression::generateTree()
 	{
 		std::priority_queue<Node*, std::vector<Node*>, NodeCompare> queue;
-		for (auto& node : leafList) queue.emplace(node);
+		for (auto& node : leafList) queue.push(node);
 
 		while(queue.size() > 1)
 		{
@@ -408,7 +430,7 @@ namespace SM2K
 			Node* tmp1 = queue.top();
 			queue.pop();
 
-			queue.emplace(tmp0->parent = tmp1->parent = new Node(-1, tmp0->frequency + tmp1->frequency, tmp0, tmp1));
+			queue.push(tmp0->parent = tmp1->parent = new Node( -1, tmp0->frequency + tmp1->frequency, tmp0, tmp1));
 		}
 		if(!queue.empty())
 		{

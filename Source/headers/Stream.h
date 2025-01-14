@@ -128,10 +128,10 @@ namespace SM2K
 			ADD(FilePath, id).path = "./data/testCompression.txt";
 			auto& com = ADD(smCompression, id, _registry, id);
 
-			string read;
-		//	com.CompressByLine({ "Padding","Teast0","test2","test3","test11","test100"});
-			com.ReadByLine(read);
-
+			string read = "~";
+			//com.CompressByLine({ "Padding","Teast0","test2","test3","test11","test100"});
+			com.ReadByIndex(read, 4);
+			std::cout << read << std::endl;
 
 			com.End();
 
