@@ -603,6 +603,10 @@ namespace ini
                 if(line.size() == 0)
                     continue;
 
+				if(line.find(SM2K_END_OF_CONFIG) != std::string::npos)
+					break;
+				
+
                 if(line[0] == '[')
                 {
                     // line is a section

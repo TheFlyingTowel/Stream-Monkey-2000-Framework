@@ -141,9 +141,16 @@ namespace SM2K
 			sysPaths.tmpPath = "./.sm2k/";
 			sysPaths.dataRootPath = "./data/";
 			sysPaths.logPath = "./data/logs/";
+			sysPaths.showPath = "./data/shows/";
 
 			auto& config = _registry.emplace<smConfig>(e, make_a(_Config, _REGENT{ &_registry, e })).config; // Loads config file.
 
+			sysPaths.tmpPath = config->at("Core").at("tmpPath").as<string>();
+			sysPaths.dataRootPath = config->at("Core").at("dataRootPath").as<string>();
+			sysPaths.logPath = config->at("Core").at("logPath").as<string>();
+			sysPaths.showPath = config->at("Core").at("showPath").as<string>();
+
+			std::filesystem::create_directories(sysPaths.showPath);
 			std::filesystem::create_directories(sysPaths.tmpPath);
 			std::filesystem::create_directories(sysPaths.dataRootPath);
 			std::filesystem::create_directories(sysPaths.logPath);

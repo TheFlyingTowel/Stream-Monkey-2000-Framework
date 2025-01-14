@@ -67,6 +67,7 @@ namespace SM2K
 		(*this)["Core"]["dataRootPath"] = "./data/";
 		(*this)["Core"]["tmpPath"] = "./.sm2k/";
 		(*this)["Core"]["logPath"] = "./data/logs/";
+		(*this)["Core"]["showPath"] = "./data/shows/";
 		(*this)["Core"]["maxRegistry"] = 6000;
 		(*this)["Stream"]["poolCount"] = 8;
 		(*this)["Stream"]["instancePath"] = "./data/stream_instances/";

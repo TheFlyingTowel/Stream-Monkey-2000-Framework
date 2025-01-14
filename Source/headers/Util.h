@@ -18,6 +18,11 @@ namespace SM2K
 		string path;
 	};
 
+	COMPONENT(ShowCompressConfig) 
+	{
+		string name;
+	};
+
 	/// <summary>
 	/// A container for the read line file pointer position.
 	/// </summary>
@@ -32,7 +37,7 @@ namespace SM2K
 		//PosData(u64 _pos, s8 _ndx) : _current_postion{ _pos }, _max_line_index{ 0 }, _current_index{ _ndx } {}
 	};
 
-	struct smCompression
+	struct _Compression 
 	{
 	private:
 		struct Node
@@ -60,29 +65,38 @@ namespace SM2K
 
 	public:
 
-		smCompression(_Registry& _registry, _Entity e)
-			: registry{_registry}, entity{e}, path{GET(FilePath, e).path}
+		_Compression(_Registry& _registry, _Entity e)
+			: registry{ _registry }, entity{ e }, path{ GET(FilePath, e).path }
 		{
 			isOpen = false;
 			DELETE(FilePath, e);
 		};
-		~smCompression() 
-		{
-			_clear();
-		};
+
+		virtual ~_Compression();
+		
 		std::fstream& flush_out(std::fstream& _out);
 		std::fstream& bv_out(std::fstream& _out, std::vector<bool>& _bits);
 		std::ifstream& bv_in(std::ifstream& _in, bool& _bit);
+
+
+		oss& flush_out_oss(oss& _out);
+		oss& bv_out_oss(oss& _out, std::vector<bool>& _bits);
+		iss& bv_in_str(iss& _in, bool& _bit);
+
 		void CompressByLine(const vector(string)& _lines, const u8 _endLine = '\n');
 		void ReadByLine(string& _line, const char& _endLine = '\n');
 		void ReadByIndex(string& _line, const u64& _index, const char _endLine = '\n');
+
+		void CompressByLineConfig(const vector(string)& _lines, const u8 _endLine = '\n');
+		void ReadByLineConfig(string& _line, const char& _endLine = '\n');
+		void ReadByIndexConfig(string& _line, const u64& _index, const char _endLine = '\n');
+		
 		void End(); // Removes this componetent from the entity.
 	private:
 		bool isOpen = false;
 		_Registry& registry;
 		_Entity entity;
 		string path;
-		oss data;
 		u32 frequencyTable[256]{0};
 		vector(Node*) leafList;
 		vector(bool) encodingTable[256];
@@ -102,6 +116,7 @@ namespace SM2K
 		void generateTree();
 		void generateEncodingTable();
 
+		char decompressChar(iss& ifs, Node* _node);
 		char decompressChar(std::ifstream& ifs, Node* _node);
 
 		void saveHeader();
@@ -110,6 +125,15 @@ namespace SM2K
 		void loadLinePosData();
 	};
 
+	
+	COMPONENT(smCompression)
+	{
+		Shared(_Compression) com;
+		smCompression(_Registry& _reg, _Entity e)
+			:com{make_a(_Compression, _reg, e) }
+		{}
+	};
+	
 	struct FileDirectory // Extracts a file's directory path.
 	{
 		string path;

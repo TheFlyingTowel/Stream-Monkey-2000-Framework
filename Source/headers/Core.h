@@ -45,10 +45,31 @@ namespace SM2K
 			string tmpPath;
 			string dataRootPath;
 			string logPath;
+			string showPath;
 			string hlsBaseDumpPath;
 			string streamInstanceDumpPath;
 			string urlBase;
 		};
+
+		COMPONENT(smUnformattedShow) 
+		{
+			string name;
+			string path;
+		};
+
+		COMPONENT(smShow) 
+		{
+			u64 sourceCount;
+			u64 totalTimeLength;
+			string name;
+			string path;
+		};
+		COMPONENT(smShowLoader) 
+		{
+			list(smUnformattedShow) unformattedShows;
+			list(smShow) formattedShows;
+		};
+
 
 		COMPONENT(_Log)
 		{

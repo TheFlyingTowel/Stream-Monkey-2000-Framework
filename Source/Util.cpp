@@ -165,7 +165,7 @@ namespace SM2K
 #pragma endregion
 
 #pragma region Compression
-	void smCompression::generateFrequencyTable(vector(string) _data)
+	void _Compression::generateFrequencyTable(vector(string) _data)
 	{
 		memset(frequencyTable, 0x0, sizeof(frequencyTable));
 		
@@ -182,7 +182,12 @@ namespace SM2K
 
 	}
 
-	std::fstream& smCompression::flush_out(std::fstream& _out) 
+	_Compression::~_Compression()
+	{
+		_clear();
+	};
+
+	std::fstream& _Compression::flush_out(std::fstream& _out)
 	{
 		if (bit_index < 7)
 			_out.write((char*) &bit_buffer, 1);
@@ -190,7 +195,7 @@ namespace SM2K
 
 		return _out;
 	}
-	std::fstream& smCompression::bv_out(std::fstream& _out, std::vector<bool>& _bits)
+	std::fstream& _Compression::bv_out(std::fstream& _out, std::vector<bool>& _bits)
 	{
 		for (auto bit : _bits)
 		{
@@ -208,7 +213,7 @@ namespace SM2K
 		}
 		return _out;
 	}
-	std::ifstream& smCompression::bv_in(std::ifstream& _in, bool& _bit)
+	std::ifstream& _Compression::bv_in(std::ifstream& _in, bool& _bit)
 	{
 		if(bit_index < 0)
 		{
@@ -221,9 +226,49 @@ namespace SM2K
 		return _in;
 	}
 
-	void smCompression::CompressByLine(const vector(string)& _lines, const u8 _endLine)
+	oss& _Compression::flush_out_oss(oss& _out)
 	{
-		data.str("");
+		if (bit_index < 7)
+			_out.write((char*)&bit_buffer, 1);
+		bit_index = 7;
+
+		return _out;
+	}
+
+	oss& _Compression::bv_out_oss(oss& _out, std::vector<bool>& _bits)
+	{
+		for (auto bit : _bits)
+		{
+			if (bit)
+				bit_buffer |= 1 << bit_index;
+			--bit_index;
+
+			if (bit_index < 0)
+			{
+				_out.write((char*)&bit_buffer, 1);
+				bit_buffer = 0x0;
+				bit_index = 7;
+			}
+
+		}
+		return _out;
+	}
+
+	iss& _Compression::bv_in_str(iss& _in, bool& _bit)
+	{
+		if (bit_index < 0)
+		{
+			bit_index = 7;
+			_in.read((char*)&bit_buffer, 1);
+		}
+
+		_bit = !!(bit_buffer & (1 << bit_index));
+		--bit_index;
+		return _in;
+	}
+
+	void _Compression::CompressByLine(const vector(string)& _lines, const u8 _endLine)
+	{
 		if (!isOpen)
 		{
 			generateFrequencyTable(_lines);
@@ -264,7 +309,7 @@ namespace SM2K
 		saveLinePosData();
 	}
 
-	void smCompression::ReadByLine(string& _line, const char& _endLine)
+	void _Compression::ReadByLine(string& _line, const char& _endLine)
 	{
 		oss result;
 		std::ifstream ifs(path, std::ios::binary);
@@ -314,7 +359,7 @@ namespace SM2K
 		_line = result.str();
 	}
 
-	void smCompression::ReadByIndex(string& _line, const u64& _index, char _endLine)
+	void _Compression::ReadByIndex(string& _line, const u64& _index, char _endLine)
 	{
 		oss result;
 		u64 index = 0;
@@ -369,7 +414,131 @@ namespace SM2K
 		_line = result.str();
 	}
 
-	void smCompression::End()
+	void _Compression::CompressByLineConfig(const vector(string)& _lines, const u8 _endLine)
+	{
+		oss data("", std::ios::binary);
+
+		if (!isOpen)
+		{
+			generateFrequencyTable(_lines);
+			frequencyTable[_endLine] = _lines.size();
+			++frequencyTable[EOT];
+			generateLeafList();
+			generateTree();
+			generateEncodingTable();
+			isOpen = true;
+		}
+		data.seekp(0);
+		PosData pos{ sizeof(PosData) };
+		data.write((char*)&pos, sizeof(PosData));
+
+
+		u32 maxIndex = -1;
+		for (string line : _lines)
+		{
+			for (s32 i = 0; i < line.length(); ++i)
+				bv_out_oss(data, encodingTable[(u8)line[i]]);
+			bv_out_oss(data, encodingTable[(u8)_endLine]);
+			++maxIndex;
+		}
+		bv_out_oss(data, encodingTable[(u8)EOT]);
+		flush_out_oss(data);
+		++maxIndex;
+
+		data.write((char*)frequencyTable, sizeof(frequencyTable));
+		
+		pos._max_line_index = maxIndex;
+		positionData = pos;
+		data.seekp(0);
+		data.write((char*)&pos, sizeof(PosData));
+
+		if(registry.any_of<ShowCompressConfig>(entity))
+		{
+			ini::IniFile out;
+			if(registry.all_of<ShowCompressConfig>(entity))
+			{
+				auto& name = registry.get<ShowCompressConfig>(entity).name;
+				out["ShowConfig"]["name"] = name;
+				out["ShowConfig"]["sourceCount"] = maxIndex;
+				out["ShowConfig"]["totalTimeLength"] = -1;
+				out["DataBuffer"]["buffer"] = data.str();
+			}
+
+			out.save(path);
+		}
+
+	}
+
+	void _Compression::ReadByLineConfig(string& _line, const char& _endLine)
+	{
+		ini::IniFile out;
+		out.load(path);
+		oss result;
+		oss data("", std::ios::binary);
+		iss in(out.at("DataBuffer").at("buffer").as<string>(), std::ios::binary);
+		if (!isOpen)
+		{
+			in.seekg(-1 * sizeof(frequencyTable), std::ios::end);
+			in.read((char*)frequencyTable, sizeof(frequencyTable));
+			generateLeafList();
+			generateTree();
+			isOpen = true;
+		}
+
+		in.seekg(0);
+		in.read((char*)&positionData, sizeof(positionData));
+		in.seekg(positionData._current_postion);
+		bit_index = positionData._bit_index;
+		bit_buffer = positionData._bit_buffer;
+
+		char tmp = 0x0;
+		while (true)
+		{
+			tmp = decompressChar(in, tree);
+
+
+			if (tmp == EOT || tmp == _endLine) break;
+			positionData._current_postion = in.tellg();
+			result << tmp;
+		}
+
+		if (tmp == EOT)
+		{
+			result.str("");
+			positionData._current_postion = sizeof(PosData);
+			positionData._bit_buffer = 0;
+			positionData._bit_index = -1;
+			
+			data.str(in.str());
+			
+			data.seekp(0);
+			data.write((char*)&positionData, sizeof(positionData));
+
+			out["DataBuffer"]["buffer"] = data.str();
+			out.save(path);
+			_line = result.str();
+			return;
+		}
+		else positionData._current_postion = in.tellg();
+		
+
+		positionData._bit_index = bit_index;
+		positionData._bit_buffer = bit_buffer;
+		data.str(in.str());
+
+		data.seekp(0);
+		data.write((char*)&positionData, sizeof(positionData));
+
+		out["DataBuffer"]["buffer"] = data.str();
+		out.save(path);
+		_line = result.str();
+	}
+
+	void _Compression::ReadByIndexConfig(string& _line, const u64& _index, const char _endLine)
+	{
+	}
+
+	void _Compression::End()
 	{
 		isOpen = false;
 		memset(frequencyTable, 0x0, sizeof(frequencyTable));
@@ -377,10 +546,24 @@ namespace SM2K
 		leafList.clear();
 		for (int i = 0; i < 256; ++i)
 			encodingTable[i].clear();
-		registry.remove<smCompression>(entity);
+		registry.remove<_Compression>(entity);
 	}
 
-	char smCompression::decompressChar(std::ifstream& _stream, Node* _node)
+	char _Compression::decompressChar(iss& _stream, Node* _node)
+	{
+		while (_node->value == -1)
+		{
+			bool tmp;
+			bv_in_str(_stream, tmp);
+			if (tmp) _node = _node->right;
+			else _node = _node->left;
+		}
+
+
+		return _node->value;
+	}
+
+	char _Compression::decompressChar(std::ifstream& _stream, Node* _node)
 	{
 
 		while (_node->value == -1)
@@ -395,13 +578,13 @@ namespace SM2K
 		return _node->value;
 	}
 
-	void smCompression::_clear()
+	void _Compression::_clear()
 	{
 		_clear(tree);
 		tree = nullptr;
 	}
 
-	void smCompression::_clear(Node* _node)
+	void _Compression::_clear(Node* _node)
 	{
 		if (!_node) return;
 		_clear(_node->left);
@@ -409,7 +592,7 @@ namespace SM2K
 		delete _node;
 	}
 
-	void smCompression::generateLeafList()
+	void _Compression::generateLeafList()
 	{
 		leafList.clear();
 		for (u16 ndx = 0; ndx < 256; ++ndx)
@@ -417,7 +600,7 @@ namespace SM2K
 				leafList.push_back(new Node(ndx, frequencyTable[ndx]));
 	}
 
-	void smCompression::generateTree()
+	void _Compression::generateTree()
 	{
 		std::priority_queue<Node*, std::vector<Node*>, NodeCompare> queue;
 		for (auto& node : leafList) queue.push(node);
@@ -439,7 +622,7 @@ namespace SM2K
 		}
 	}
 
-	void smCompression::generateEncodingTable()
+	void _Compression::generateEncodingTable()
 	{
 		for(auto& node : leafList)
 		{
@@ -455,12 +638,12 @@ namespace SM2K
 		}
 	}
 
-	void smCompression::saveHeader()
+	void _Compression::saveHeader()
 	{
-		data.write((char*)frequencyTable, 256 * sizeof(u32));// Stores the headers at the end of the buffer.
+		//data.write((char*)frequencyTable, 256 * sizeof(u32));// Stores the headers at the end of the buffer.
 	}
 
-	void smCompression::saveLinePosData()
+	void _Compression::saveLinePosData()
 	{
 		std::fstream ofs(path, std::ios::binary | std::ios::out | std::ios::in);
 		ofs.seekp(0);
@@ -469,7 +652,7 @@ namespace SM2K
 
 	}
 
-	void smCompression::loadLinePosData()
+	void _Compression::loadLinePosData()
 	{
 		std::ifstream ifs(path, std::ios::binary | std::ios::in);
 		ifs.seekg(0);

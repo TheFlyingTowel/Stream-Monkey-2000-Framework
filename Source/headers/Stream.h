@@ -126,11 +126,12 @@ namespace SM2K
 			_Registry& _registry = *registry;
 			//TODO: Add hls frame prossecing and time logic.
 			ADD(FilePath, id).path = "./data/testCompression.txt";
-			auto& com = ADD(smCompression, id, _registry, id);
+			ADD(ShowCompressConfig, id).name = "Test";
+			auto& com = ADD(_Compression, id, _registry, id);
 
 			string read = "~";
-			//com.CompressByLine({ "Padding","Teast0","test2","test3","test11","test100"});
-			com.ReadByIndex(read, 4);
+			com.CompressByLineConfig({ "Padding","Teast0","test2","test3","test11","test100" });
+			//com.ReadByLineConfig(read);
 			std::cout << read << std::endl;
 
 			com.End();

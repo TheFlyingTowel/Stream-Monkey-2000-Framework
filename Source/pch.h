@@ -23,6 +23,7 @@
 #define SM2K_APPDATA_CMD "echo $XDG_CONFIG_HOME"
 #endif // _WIN32
 
+#define SM2K_END_OF_CONFIG "[END_OF_CONFIG]\n"
 
 #include <iostream>
 #include <string>
