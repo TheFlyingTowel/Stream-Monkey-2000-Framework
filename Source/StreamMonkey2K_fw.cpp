@@ -3,9 +3,6 @@
 
 #define SM2K_EXPORTS
 #include "pch.h"
-//#ifdef _WIN32 // must use MT platform DLL libraries on windows
-//#pragma comment(lib, "shaderc_combined.lib") 
-//#endif
 
 namespace SM2K
 {
@@ -156,7 +153,35 @@ namespace SM2K
 
 
 
+std::string format_string(const char* format, ...) {
+	// Buffer for the formatted string
+	char buffer[1024];
 
+	// Start variadic argument processing
+	va_list args;
+	va_start(args, format);
+
+	// Format the string
+	std::vsnprintf(buffer, sizeof(buffer), format, args);
+
+	// End variadic argument processing
+	va_end(args);
+
+	// Return as a std::string
+	return std::string(buffer);
+}
+
+
+std::string print_timestamp(int64_t timestamp, AVStream* stream) {
+	// Convert the timestamp to seconds by scaling it with the stream's time base
+	//double seconds = av_rescale_q((int64_t)timestamp, stream->time_base, AVRational{ 1, AV_TIME_BASE });
+	double seconds = ((double)timestamp * stream->time_base.num / stream->time_base.den);
+	SM2K::u32 min = (SM2K::u32)std::floor(seconds / 60.0);
+	SM2K::u32 hr = std::floor(min / 60);
+	return format_string("%02u:%02u:%02u", hr, min, ((SM2K::u32)std::floor(seconds)) % 60);
+}
+
+namespace py = pybind11;
 
 int main(int argsc, char** args) // For Testing
 {
@@ -168,8 +193,10 @@ int main(int argsc, char** args) // For Testing
 	_CrtSetBreakAlloc(-1);
 #endif // DEBUG_MEM_LEAK
 
+	py::scoped_interpreter guard{}; // Initializes Python
+	auto resultObj = py::eval("min(2, 5)");
 
-
+	double result = resultObj.cast<double>();
 
 
 
@@ -201,10 +228,11 @@ int main(int argsc, char** args) // For Testing
 		return -1;
 	}
 
+	// Options (HLS)
 	AVDictionary* hls_opts = NULL;
-	av_dict_set(&hls_opts, "hls_time", "10", 0);
-	av_dict_set(&hls_opts, "hls_list_size", "0", 0);
-	av_dict_set(&hls_opts, "hls_flags", "independent_segments", 0);
+	av_dict_set(&hls_opts, "hls_time", "8", 0);
+	av_dict_set(&hls_opts, "hls_list_size", "4", 0);
+	av_dict_set(&hls_opts, "hls_flags", "independent_segments +append_list +omit_endlist +discont_start +delete_segments", 0);
 
 	for (int i = 0; i < in_ctx->nb_streams; i++) {
 		AVStream* in_stream = in_ctx->streams[i];
@@ -235,6 +263,9 @@ int main(int argsc, char** args) // For Testing
 		AVStream* in_stream = in_ctx->streams[pkt.stream_index];
 		AVStream* out_stream = out_ctx->streams[pkt.stream_index];
 
+
+		std::cout << "[" << print_timestamp(pkt.pts, in_stream) << "]\r";
+
 		// Convert PTS/DTS to real-time
 		int64_t pts_time = av_rescale_q(pkt.pts, in_stream->time_base, AVRational{ 1, AV_TIME_BASE });
 		int64_t now = av_gettime_relative() - start_time;
@@ -260,6 +291,9 @@ int main(int argsc, char** args) // For Testing
 	}
 
 	av_write_trailer(out_ctx);
+	//if (out_ctx->pb && !(out_ctx->oformat->flags & AVFMT_NOFILE)) {
+	//	avio_flush(out_ctx->pb);  // Ensure all data is written to the file
+	//}
 
 	avformat_close_input(&in_ctx);
 	avio_closep(&out_ctx->pb);

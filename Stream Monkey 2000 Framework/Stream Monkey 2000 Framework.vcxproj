@@ -117,7 +117,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>D:\ffmpeg_dev\ffmpeg-N-118315-g4f3c9f2f03-win64-gpl-shared\ffmpeg\lib;D:\ffmpeg_dev\ffmpeg-N-118315-g4f3c9f2f03-win64-gpl-shared\ffmpeg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Towel\AppData\Local\Programs\Python\Python312\include;D:\DATA_SAVE\Dev_Projects\Stream Monkey 2000 Framework\Source\headers\externals\pybind11\include;D:\ffmpeg_dev\ffmpeg-N-118315-g4f3c9f2f03-win64-gpl-shared\ffmpeg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

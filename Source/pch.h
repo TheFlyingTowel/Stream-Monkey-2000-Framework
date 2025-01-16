@@ -28,6 +28,15 @@
 #define SM2K_END_OF_CONFIG  S(__SM2K_END_OF_CONFIG ## \n\n)
 
 
+#ifndef PATH_TO_CORE_PYTHON_LIBS
+#define PATH_TO_CORE_PYTHON_LIBS "C:\\Users\\Towel\\AppData\\Local\\Programs\\Python\\Python312\\libs\\"
+#endif // !PATH_TO_CORE_PYTHON_LIBS
+
+
+#pragma comment(lib, PATH_TO_CORE_PYTHON_LIBS"python3.lib") 
+#pragma comment(lib, PATH_TO_CORE_PYTHON_LIBS"python312.lib") 
+
+
 #include <filesystem>
 #include <iostream>
 #include <string>
@@ -43,6 +52,7 @@
 #include <iomanip>
 #include <unordered_map>
 #include <stdio.h>
+#include <pybind11/embed.h>
 
 extern "C" {
 // Added FFMPEG libs
