@@ -9,15 +9,12 @@
 #define GATEWARE_DISABLE_GDIRECTX11SURFACE
 #define GATEWARE_DISABLE_GDIRECTX12SURFACE
 
+
 #ifdef _WIN32
-#include <filesystem>
-#define _SM2K_FILESYSTEM std::filesystem
 #define _popen_ _popen
 #define _pclose_ _pclose
 #define SM2K_APPDATA_CMD "echo %APPDATA%"
 #else
-#include "filesystem"
-#define _SM2K_FILESYSTEM std::filesystem
 #define _popen_ popen
 #define _pclose_ pclose
 #define SM2K_APPDATA_CMD "echo $XDG_CONFIG_HOME"
@@ -30,6 +27,8 @@
 #define _SM2K_END_OF_CONFIG __S(__SM2K_END_OF_CONFIG)
 #define SM2K_END_OF_CONFIG  S(__SM2K_END_OF_CONFIG ## \n\n)
 
+
+#include <filesystem>
 #include <iostream>
 #include <string>
 #include <list>
@@ -43,7 +42,14 @@
 #include <sstream>
 #include <iomanip>
 #include <unordered_map>
-// TODO: Add FFMPEG libs
+#include <stdio.h>
+
+extern "C" {
+// Added FFMPEG libs
+#include <libavformat/avformat.h>
+#include <libavutil/time.h>
+}
+
 #include "headers/externals/entt/entt.hpp"
 #include "headers/externals/ini/inicpp.h"
 #include "headers/externals/Gateware/Gateware.h"

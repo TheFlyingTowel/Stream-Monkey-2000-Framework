@@ -70,6 +70,15 @@ namespace SM2K
 			list(smShow) formattedShows;
 		};
 
+		COMPONENT(smUnformattedShows)
+		{
+			list(smUnformattedShow) shows;
+		};
+		
+		COMPONENT(smFormattedShows)
+		{
+			list(smShow) shows;
+		};
 
 		COMPONENT(_Log)
 		{

@@ -3,6 +3,10 @@
 
 #define SM2K_EXPORTS
 #include "pch.h"
+//#ifdef _WIN32 // must use MT platform DLL libraries on windows
+//#pragma comment(lib, "shaderc_combined.lib") 
+//#endif
+
 namespace SM2K
 {
 
@@ -167,7 +171,104 @@ int main(int argsc, char** args) // For Testing
 
 
 
-	sm2k test = nullptr;
+
+
+	avformat_network_init();
+
+	// Input
+	AVFormatContext* in_ctx = nullptr;
+	if (avformat_open_input(&in_ctx, "D:\\Users\\Towel\\Documents\\Firefox.mp4", nullptr, nullptr))
+	{
+		fprintf(stderr, "Could not open file");
+		return -1;
+	}
+
+	if (avformat_find_stream_info(in_ctx, nullptr) < 0) 
+	{
+		fprintf(stderr, "Could not find stream info\n");
+		avformat_close_input(&in_ctx);
+		return -1;
+	}
+
+	cstring outFile = "./data/dump/Test/test.m3u8";
+
+
+	// Output file (HLS)
+	AVFormatContext* out_ctx = NULL;
+	if (avformat_alloc_output_context2(&out_ctx, NULL, "hls", outFile) < 0) {
+		fprintf(stderr, "Could not allocate output context\n");
+		avformat_close_input(&in_ctx);
+		return -1;
+	}
+
+	AVDictionary* hls_opts = NULL;
+	av_dict_set(&hls_opts, "hls_time", "10", 0);
+	av_dict_set(&hls_opts, "hls_list_size", "0", 0);
+	av_dict_set(&hls_opts, "hls_flags", "independent_segments", 0);
+
+	for (int i = 0; i < in_ctx->nb_streams; i++) {
+		AVStream* in_stream = in_ctx->streams[i];
+		AVStream* out_stream = avformat_new_stream(out_ctx, NULL);
+		avcodec_parameters_copy(out_stream->codecpar, in_stream->codecpar);
+	}
+
+	if (avio_open(&out_ctx->pb, outFile, AVIO_FLAG_WRITE) < 0) {
+		fprintf(stderr, "Could not open output file\n");
+		avformat_close_input(&in_ctx);
+		avformat_free_context(out_ctx);
+		return -1;
+	}
+
+	if (avformat_write_header(out_ctx, &hls_opts) < 0) {
+		fprintf(stderr, "Could not write HLS header\n");
+		avformat_close_input(&in_ctx);
+		avio_closep(&out_ctx->pb);
+		avformat_free_context(out_ctx);
+		return -1;
+	}
+
+	// Start time for synchronization
+	int64_t start_time = av_gettime_relative();
+
+	AVPacket pkt;
+	while (av_read_frame(in_ctx, &pkt) >= 0) {
+		AVStream* in_stream = in_ctx->streams[pkt.stream_index];
+		AVStream* out_stream = out_ctx->streams[pkt.stream_index];
+
+		// Convert PTS/DTS to real-time
+		int64_t pts_time = av_rescale_q(pkt.pts, in_stream->time_base, AVRational{ 1, AV_TIME_BASE });
+		int64_t now = av_gettime_relative() - start_time;
+
+		// Sleep if needed
+		if (pts_time > now) {
+			av_usleep(pts_time - now);
+		}
+
+		// Rescale timestamps
+		pkt.pts = av_rescale_q_rnd(pkt.pts, in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF);
+		pkt.dts = av_rescale_q_rnd(pkt.dts, in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF);
+		pkt.duration = av_rescale_q(pkt.duration, in_stream->time_base, out_stream->time_base);
+		pkt.pos = -1;
+
+		// Write packet to output
+		if (av_interleaved_write_frame(out_ctx, &pkt) < 0) {
+			fprintf(stderr, "Error writing packet\n");
+			break;
+		}
+
+		av_packet_unref(&pkt);
+	}
+
+	av_write_trailer(out_ctx);
+
+	avformat_close_input(&in_ctx);
+	avio_closep(&out_ctx->pb);
+	avformat_free_context(out_ctx);
+	av_dict_free(&hls_opts);
+	avformat_network_deinit();
+
+
+	/*sm2k test = nullptr;
 	sm2k test2 = nullptr;
 	sm2k test3 = nullptr;
 	sm2k test4 = nullptr;
@@ -193,7 +294,7 @@ int main(int argsc, char** args) // For Testing
 
 
 
-	StopAndDestroyInstance(test);
+	StopAndDestroyInstance(test);*/
 
 
 
