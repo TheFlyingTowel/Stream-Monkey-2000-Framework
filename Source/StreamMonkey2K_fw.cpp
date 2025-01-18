@@ -195,7 +195,7 @@ namespace py = pybind11;
 
 
 
-void RunPy(std::string& _out, int64_t& _endTime)
+void ExtractYT(const std::string& _link, std::string& _out, int64_t& _endTime)
 {
 	using namespace SM2K;
 	using namespace Core_layer;
@@ -224,15 +224,8 @@ void RunPy(std::string& _out, int64_t& _endTime)
 
 			auto extract = func.attr("_run");
 
-			raw_src = extract("https://www.youtube.com/watch?v=eT3yJzCXz4g", false).cast<string>();
+			raw_src = extract(_link, false).cast<string>();
 
-
-			//auto res = yt_dlp.attr("YoutubeDL")().attr("extract_info")("https://www.youtube.com/watch?v=NeHjMNBsVfs", py::bool_(false)).cast<py::dict>();
-
-			// Iterate over the dictionary
-			/*for (const auto& item : res)
-				std::cout << "Key: " << item.first.cast<std::string>()
-					<< ", Value: " << py::str(item.second).cast<string>() << std::endl;*/
 
 		}
 		catch (const std::exception& e) {
@@ -292,20 +285,19 @@ double calculate_current_time_seconds(AVStream* stream, int64_t _current) {
 
 	return end_time_seconds;
 }
-int main(int argsc, char** args) // For Testing
+
+
+
+
+void RunTestYTStream(std::string _link = "https://www.youtube.com/watch?v=eT3yJzCXz4g")
 {
+
 	using namespace SM2K;
 	using namespace Core_layer;
 
-#ifdef DEBUG_MEM_LEAK
-	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-	_CrtSetBreakAlloc(-1);
-#endif // DEBUG_MEM_LEAK
-
-	// "D:\\Users\\Towel\\Documents\\Firefox.mp4"
 	string link;
 	int64_t end;
-	RunPy(link, end);
+	ExtractYT(_link, link, end);
 
 	avformat_network_init();
 
@@ -314,14 +306,14 @@ int main(int argsc, char** args) // For Testing
 	if (avformat_open_input(&in_ctx, link.c_str(), nullptr, nullptr))
 	{
 		fprintf(stderr, "Could not open file");
-		return -1;
+		return;
 	}
 
-	if (avformat_find_stream_info(in_ctx, nullptr) < 0) 
+	if (avformat_find_stream_info(in_ctx, nullptr) < 0)
 	{
 		fprintf(stderr, "Could not find stream info\n");
 		avformat_close_input(&in_ctx);
-		return -1;
+		return;
 	}
 
 	cstring outFile = "./data/dump/Test/test.m3u8";
@@ -332,13 +324,15 @@ int main(int argsc, char** args) // For Testing
 	if (avformat_alloc_output_context2(&out_ctx, NULL, "hls", outFile) < 0) {
 		fprintf(stderr, "Could not allocate output context\n");
 		avformat_close_input(&in_ctx);
-		return -1;
+		return;
 	}
 
 	// Options (HLS)
 	AVDictionary* hls_opts = NULL;
 	av_dict_set(&hls_opts, "hls_time", "8", 0);
 	av_dict_set(&hls_opts, "hls_list_size", "4", 0);
+	av_dict_set(&hls_opts, "hls_list_type", "live", 0);
+	//av_dict_set(&hls_opts, "hls_segment_filename", "segment%03d.ts", 0);
 	av_dict_set(&hls_opts, "hls_flags", "independent_segments +append_list +omit_endlist +discont_start +delete_segments", 0);
 	//av_dict_set(&hls_opts, "hls_flags", "independent_segments +omit_endlist +append_list +delete_segments", 0);
 
@@ -352,7 +346,7 @@ int main(int argsc, char** args) // For Testing
 		fprintf(stderr, "Could not open output file\n");
 		avformat_close_input(&in_ctx);
 		avformat_free_context(out_ctx);
-		return -1;
+		return;
 	}
 
 	if (avformat_write_header(out_ctx, &hls_opts) < 0) {
@@ -360,7 +354,7 @@ int main(int argsc, char** args) // For Testing
 		avformat_close_input(&in_ctx);
 		avio_closep(&out_ctx->pb);
 		avformat_free_context(out_ctx);
-		return -1;
+		return;
 	}
 	av_log_set_level(AV_LOG_WARNING);
 	// Start time for synchronization
@@ -375,10 +369,10 @@ int main(int argsc, char** args) // For Testing
 
 
 		frame = av_read_frame(in_ctx, &pkt);
-		if(frame < 0)
+		if (frame < 0)
 		{
 			while ((frame = av_read_frame(in_ctx, &pkt)) < 0)
-				if(lastPos >= end) break;
+				if (lastPos >= end) break;
 		}
 		AVStream* in_stream = in_ctx->streams[pkt.stream_index];
 		AVStream* out_stream = out_ctx->streams[pkt.stream_index];
@@ -386,13 +380,13 @@ int main(int argsc, char** args) // For Testing
 		int64_t pts_time = av_rescale_q(pkt.pts, in_stream->time_base, AVRational{ 1, AV_TIME_BASE });
 		int64_t now = av_gettime_relative() - start_time;
 
-		if(!set)
+		if (!set)
 		{
 			end = calculate_end_time_seconds(in_stream);
 			set = true;
 		}
 
-		if (pkt.pts >= 0) lastPos = calculate_current_time_seconds(in_stream , pkt.pts);
+		if (pkt.pts >= 0) lastPos = calculate_current_time_seconds(in_stream, pkt.pts);
 
 		av_rescale_q(end, in_stream->time_base, AVRational{ 1, AV_TIME_BASE });
 		// Sleep if needed
@@ -411,8 +405,9 @@ int main(int argsc, char** args) // For Testing
 		// Write packet to output
 		if (av_interleaved_write_frame(out_ctx, &pkt) < 0) {
 			printf("Error writing packet\n");
-			if(frame < 0) break;
-		}else
+			if (frame < 0) break;
+		}
+		else
 		{
 			string tmp = outFile, in, lastIn;
 			std::ifstream inStream(tmp + ".tmp");
@@ -420,7 +415,7 @@ int main(int argsc, char** args) // For Testing
 			while (!inStream.eof())
 			{
 				inStream >> in;
-				if(in != lastIn)
+				if (in != lastIn)
 				{
 					outStream << in + '\n';
 					lastIn = in;
@@ -430,8 +425,8 @@ int main(int argsc, char** args) // For Testing
 			outStream.close();
 		}
 		if (lastPos >= end)
-		{	
-			av_packet_unref(&pkt);	
+		{
+			av_packet_unref(&pkt);
 			break;
 		}
 		av_packet_unref(&pkt);
@@ -446,7 +441,7 @@ int main(int argsc, char** args) // For Testing
 	avio_flush(out_ctx->pb);
 
 	//av_usleep(500000); // Sleep for 0.5 seconds
-	
+
 	avformat_close_input(&in_ctx);
 
 
@@ -454,6 +449,26 @@ int main(int argsc, char** args) // For Testing
 	av_dict_free(&hls_opts);
 	avformat_free_context(out_ctx);
 	avformat_network_deinit();
+
+}
+
+int main(int argsc, char** args) // For Testing
+{
+	using namespace SM2K;
+	using namespace Core_layer;
+
+#ifdef DEBUG_MEM_LEAK
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+	_CrtSetBreakAlloc(-1);
+#endif // DEBUG_MEM_LEAK
+
+	// "D:\\Users\\Towel\\Documents\\Firefox.mp4"
+	
+
+	vector(string) links { "https://www.youtube.com/watch?v=HD9I4L5klGo", "https://www.youtube.com/watch?v=u9o1OYX5UOQ" };
+
+	for(auto& link : links)
+		RunTestYTStream(link);
 
 
 	/*sm2k test = nullptr;
