@@ -181,8 +181,117 @@ std::string print_timestamp(int64_t timestamp, AVStream* stream) {
 	return format_string("%02u:%02u:%02u", hr, min, ((SM2K::u32)std::floor(seconds)) % 60);
 }
 
+
+void print_timestamp_(int64_t timestamp, AVStream* stream) {
+	// Convert the timestamp to seconds by scaling it with the stream's time base
+	//double seconds = av_rescale_q((int64_t)timestamp, stream->time_base, AVRational{ 1, AV_TIME_BASE });
+	double seconds = ((double)timestamp * stream->time_base.num / stream->time_base.den);
+	SM2K::u32 min = (SM2K::u32)std::floor(seconds / 60.0);
+	SM2K::u32 hr = std::floor(min / 60);
+	printf("%02u:%02u:%02u", hr, min, ((SM2K::u32)std::floor(seconds)) % 60);
+}
+
 namespace py = pybind11;
 
+
+
+void RunPy(std::string& _out, int64_t& _endTime)
+{
+	using namespace SM2K;
+	using namespace Core_layer;
+
+	string raw_src;
+
+	{
+
+		//auto pyMath = py::module::import("ffmpeg");
+		//auto resultObj = pyMath.attr("sqrt")(2); // py::eval("min(2, 5)");
+
+		//double result = resultObj.cast<double>();
+
+		py::initialize_interpreter(); // Initializes Python
+		try
+		{
+
+			py::module_ sys = py::module_::import("sys");
+			auto path = sys.attr("path").attr("append")("./data/libs/");
+			//	string yt_dlp_path = "./data/libs/yt-dlp";
+			//	py::module_ zipimport = py::module_::import("zipimport");
+
+				//auto yt_lib = zipimport.attr("zipimporter")(yt_dlp_path);
+				//auto yt_dlp = yt_lib.attr("load_module")("yt_dlp");
+			auto func = py::module_::import("extract");
+
+			auto extract = func.attr("_run");
+
+			raw_src = extract("https://www.youtube.com/watch?v=eT3yJzCXz4g", false).cast<string>();
+
+
+			//auto res = yt_dlp.attr("YoutubeDL")().attr("extract_info")("https://www.youtube.com/watch?v=NeHjMNBsVfs", py::bool_(false)).cast<py::dict>();
+
+			// Iterate over the dictionary
+			/*for (const auto& item : res)
+				std::cout << "Key: " << item.first.cast<std::string>()
+					<< ", Value: " << py::str(item.second).cast<string>() << std::endl;*/
+
+		}
+		catch (const std::exception& e) {
+			// Catch the exception and print the error details
+			std::cerr << "Python error occurred: " << e.what() << std::endl;
+		}
+
+
+
+		py::finalize_interpreter();
+
+
+	}
+	vector(string) link = Split(raw_src, "\n");
+
+	_out = link[0];
+	_endTime = std::stoi(link[2]) * 1000;
+
+}
+
+int64_t calculate_end_pts(AVStream* stream) {
+	if (!stream || stream->duration == AV_NOPTS_VALUE) {
+		return -1; // Unable to calculate
+	}
+
+	int64_t start_pts = stream->start_time;
+	int64_t duration_pts = stream->duration;
+
+	// End PTS in the stream's timebase
+	int64_t end_pts = start_pts + duration_pts;
+
+	return end_pts;
+}
+
+double calculate_end_time_seconds(AVStream* stream) {
+	if (!stream || stream->duration == AV_NOPTS_VALUE) {
+		return -1.0; // Unable to calculate
+	}
+
+	int64_t end_pts = calculate_end_pts(stream);
+	AVRational time_base = stream->time_base;
+
+	// Convert PTS to seconds
+	double end_time_seconds = end_pts * av_q2d(time_base);
+
+	return end_time_seconds;
+}
+double calculate_current_time_seconds(AVStream* stream, int64_t _current) {
+	if (!stream || stream->duration == AV_NOPTS_VALUE) {
+		return -1.0; // Unable to calculate
+	}
+
+	AVRational time_base = stream->time_base;
+
+	// Convert PTS to seconds
+	double end_time_seconds = _current * av_q2d(time_base);
+
+	return end_time_seconds;
+}
 int main(int argsc, char** args) // For Testing
 {
 	using namespace SM2K;
@@ -193,18 +302,16 @@ int main(int argsc, char** args) // For Testing
 	_CrtSetBreakAlloc(-1);
 #endif // DEBUG_MEM_LEAK
 
-	py::scoped_interpreter guard{}; // Initializes Python
-	auto resultObj = py::eval("min(2, 5)");
-
-	double result = resultObj.cast<double>();
-
-
+	// "D:\\Users\\Towel\\Documents\\Firefox.mp4"
+	string link;
+	int64_t end;
+	RunPy(link, end);
 
 	avformat_network_init();
 
 	// Input
 	AVFormatContext* in_ctx = nullptr;
-	if (avformat_open_input(&in_ctx, "D:\\Users\\Towel\\Documents\\Firefox.mp4", nullptr, nullptr))
+	if (avformat_open_input(&in_ctx, link.c_str(), nullptr, nullptr))
 	{
 		fprintf(stderr, "Could not open file");
 		return -1;
@@ -233,6 +340,7 @@ int main(int argsc, char** args) // For Testing
 	av_dict_set(&hls_opts, "hls_time", "8", 0);
 	av_dict_set(&hls_opts, "hls_list_size", "4", 0);
 	av_dict_set(&hls_opts, "hls_flags", "independent_segments +append_list +omit_endlist +discont_start +delete_segments", 0);
+	//av_dict_set(&hls_opts, "hls_flags", "independent_segments +omit_endlist +append_list +delete_segments", 0);
 
 	for (int i = 0; i < in_ctx->nb_streams; i++) {
 		AVStream* in_stream = in_ctx->streams[i];
@@ -254,25 +362,44 @@ int main(int argsc, char** args) // For Testing
 		avformat_free_context(out_ctx);
 		return -1;
 	}
-
+	av_log_set_level(AV_LOG_WARNING);
 	// Start time for synchronization
 	int64_t start_time = av_gettime_relative();
 
 	AVPacket pkt;
-	while (av_read_frame(in_ctx, &pkt) >= 0) {
+	int64_t lastPos = 0;
+	int frame = 0;
+
+	bool set = false;
+	while (frame >= 0) {
+
+
+		frame = av_read_frame(in_ctx, &pkt);
+		if(frame < 0)
+		{
+			while ((frame = av_read_frame(in_ctx, &pkt)) < 0)
+				if(lastPos >= end) break;
+		}
 		AVStream* in_stream = in_ctx->streams[pkt.stream_index];
 		AVStream* out_stream = out_ctx->streams[pkt.stream_index];
-
-
-		std::cout << "[" << print_timestamp(pkt.pts, in_stream) << "]\r";
-
 		// Convert PTS/DTS to real-time
 		int64_t pts_time = av_rescale_q(pkt.pts, in_stream->time_base, AVRational{ 1, AV_TIME_BASE });
 		int64_t now = av_gettime_relative() - start_time;
 
+		if(!set)
+		{
+			end = calculate_end_time_seconds(in_stream);
+			set = true;
+		}
+
+		if (pkt.pts >= 0) lastPos = calculate_current_time_seconds(in_stream , pkt.pts);
+
+		av_rescale_q(end, in_stream->time_base, AVRational{ 1, AV_TIME_BASE });
 		// Sleep if needed
 		if (pts_time > now) {
+			printf("\r");
 			av_usleep(pts_time - now);
+			print_timestamp_(pkt.pts, in_stream);
 		}
 
 		// Rescale timestamps
@@ -283,22 +410,49 @@ int main(int argsc, char** args) // For Testing
 
 		// Write packet to output
 		if (av_interleaved_write_frame(out_ctx, &pkt) < 0) {
-			fprintf(stderr, "Error writing packet\n");
+			printf("Error writing packet\n");
+			if(frame < 0) break;
+		}else
+		{
+			string tmp = outFile, in, lastIn;
+			std::ifstream inStream(tmp + ".tmp");
+			std::ofstream outStream(tmp);
+			while (!inStream.eof())
+			{
+				inStream >> in;
+				if(in != lastIn)
+				{
+					outStream << in + '\n';
+					lastIn = in;
+				}
+			}
+			inStream.close();
+			outStream.close();
+		}
+		if (lastPos >= end)
+		{	
+			av_packet_unref(&pkt);	
 			break;
 		}
-
 		av_packet_unref(&pkt);
+
 	}
 
-	av_write_trailer(out_ctx);
-	//if (out_ctx->pb && !(out_ctx->oformat->flags & AVFMT_NOFILE)) {
-	//	avio_flush(out_ctx->pb);  // Ensure all data is written to the file
-	//}
 
+	av_packet_unref(&pkt);
+	av_write_trailer(out_ctx);
+
+	// Flush and close the I/O context
+	avio_flush(out_ctx->pb);
+
+	//av_usleep(500000); // Sleep for 0.5 seconds
+	
 	avformat_close_input(&in_ctx);
+
+
 	avio_closep(&out_ctx->pb);
-	avformat_free_context(out_ctx);
 	av_dict_free(&hls_opts);
+	avformat_free_context(out_ctx);
 	avformat_network_deinit();
 
 

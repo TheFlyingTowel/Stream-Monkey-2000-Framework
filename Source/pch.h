@@ -29,12 +29,12 @@
 
 
 #ifndef PATH_TO_CORE_PYTHON_LIBS
-#define PATH_TO_CORE_PYTHON_LIBS "C:\\Users\\Towel\\AppData\\Local\\Programs\\Python\\Python312\\libs\\"
+#define PATH_TO_CORE_PYTHON_LIBS "C:\\Users\\Towel\\AppData\\Local\\Programs\\Python\\Python313\\libs\\"
 #endif // !PATH_TO_CORE_PYTHON_LIBS
 
 
 #pragma comment(lib, PATH_TO_CORE_PYTHON_LIBS"python3.lib") 
-#pragma comment(lib, PATH_TO_CORE_PYTHON_LIBS"python312.lib") 
+#pragma comment(lib, PATH_TO_CORE_PYTHON_LIBS"python313.lib") 
 
 
 #include <filesystem>
