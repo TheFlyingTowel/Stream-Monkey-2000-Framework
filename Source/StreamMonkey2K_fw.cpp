@@ -327,11 +327,29 @@ void RunTestYTStream(std::string _link = "https://www.youtube.com/watch?v=eT3yJz
 		return;
 	}
 
+	string startNum;
+	{
+		std::ifstream ifs(outFile);
+		if(ifs.is_open())
+		{
+			
+			string tmp;
+			while(!ifs.eof())
+			{
+				ifs >> tmp;
+				if (!tmp.empty()) startNum = tmp;
+			}
+		}
+		Trim(startNum, "test");
+		Trim(startNum, ".ts");
+	}
+
 	// Options (HLS)
 	AVDictionary* hls_opts = NULL;
 	av_dict_set(&hls_opts, "hls_time", "8", 0);
 	av_dict_set(&hls_opts, "hls_list_size", "4", 0);
-	av_dict_set(&hls_opts, "hls_list_type", "live", 0);
+	av_dict_set(&hls_opts, "hls_list_type", "event", 0);
+	av_dict_set(&hls_opts, "hls_start_number", "200", 0);
 	//av_dict_set(&hls_opts, "hls_segment_filename", "segment%03d.ts", 0);
 	av_dict_set(&hls_opts, "hls_flags", "independent_segments +append_list +omit_endlist +discont_start +delete_segments", 0);
 	//av_dict_set(&hls_opts, "hls_flags", "independent_segments +omit_endlist +append_list +delete_segments", 0);
@@ -356,7 +374,7 @@ void RunTestYTStream(std::string _link = "https://www.youtube.com/watch?v=eT3yJz
 		avformat_free_context(out_ctx);
 		return;
 	}
-	av_log_set_level(AV_LOG_WARNING);
+	av_log_set_level(AV_LOG_DEBUG);
 	// Start time for synchronization
 	int64_t start_time = av_gettime_relative();
 
@@ -412,7 +430,7 @@ void RunTestYTStream(std::string _link = "https://www.youtube.com/watch?v=eT3yJz
 			string tmp = outFile, in, lastIn;
 			std::ifstream inStream(tmp + ".tmp");
 			std::ofstream outStream(tmp);
-			while (!inStream.eof())
+			while (!inStream.eof() && inStream.is_open())
 			{
 				inStream >> in;
 				if (in != lastIn)
@@ -465,7 +483,7 @@ int main(int argsc, char** args) // For Testing
 	// "D:\\Users\\Towel\\Documents\\Firefox.mp4"
 	
 
-	vector(string) links { "https://www.youtube.com/watch?v=HD9I4L5klGo", "https://www.youtube.com/watch?v=u9o1OYX5UOQ" };
+	vector(string) links { "https://www.youtube.com/watch?v=eT3yJzCXz4g","https://www.youtube.com/watch?v=HD9I4L5klGo", "https://www.youtube.com/watch?v=u9o1OYX5UOQ" };
 
 	for(auto& link : links)
 		RunTestYTStream(link);
