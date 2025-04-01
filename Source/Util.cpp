@@ -64,6 +64,20 @@ namespace SM2K
 		return result;
 	}
 
+	void Trim(string& _str, const string& _trim)
+	{
+		u64 pos;
+		while ((pos = _str.find(_trim)) != string::npos)
+		{
+			_str.erase(pos, _trim.length());
+		}
+	}
+
+	bool Contains(const string& _str, const string& _content)
+	{
+		return _str.find(_content) != string::npos;
+	}
+
 
 	string PtrToString(void* _ptr)
 	{
@@ -684,16 +698,6 @@ namespace SM2K
 
 #pragma endregion
 
-
-
-	void Trim(string& _str, const string& _trim)
-	{
-		u64 pos;
-		while ((pos = _str.find(_trim)) != string::npos)
-		{
-			_str.erase(pos, _trim.length());
-		}
-	}
 
 	string App_SysCmd(const vector(string)& _cmd)
 	{

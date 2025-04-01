@@ -73,8 +73,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)out\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>BuildFiles\$(Platform)\$(Configuration)\</IntDir>
-    <TargetName>StreamMonkey2K_fw_test</TargetName>
-    <LibraryPath>$(LibraryPath)</LibraryPath>
+    <TargetName>SM2K_fw_test</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)out\$(Platform)\$(Configuration)\</OutDir>
@@ -112,17 +111,17 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level1</WarningLevel>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);SILENCE_ALL_CXX17_DEPRECATION_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>Default</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>C:\Users\Towel\AppData\Local\Programs\Python\Python313\include;D:\DATA_SAVE\Dev_Projects\Stream Monkey 2000 Framework\Source\headers\externals\pybind11\include;D:\ffmpeg_dev\ffmpeg-N-118315-g4f3c9f2f03-win64-gpl-shared\ffmpeg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Python313\include;D:\DATA_SAVE\Dev_Projects\Stream Monkey 2000 Framework\Source\headers\externals\pybind11\include;D:\ffmpeg_dev\ffmpeg-N-118315-g4f3c9f2f03-win64-gpl-shared\ffmpeg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);D:\ffmpeg_dev\ffmpeg-N-118315-g4f3c9f2f03-win64-gpl-shared\ffmpeg\lib\*.lib;C:\Users\Towel\AppData\Local\Programs\Python\Python313\libs\*.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(CoreLibraryDependencies);D:\ffmpeg_dev\ffmpeg-N-118315-g4f3c9f2f03-win64-gpl-shared\ffmpeg\lib\*.lib;C:\Python313\libs\*.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -155,9 +154,11 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\Source\Python.cpp" />
     <ClCompile Include="..\Source\Signal.cpp" />
     <ClCompile Include="..\Source\Stream.cpp" />
     <ClCompile Include="..\Source\StreamMonkey2K_fw.cpp" />
+    <ClCompile Include="..\Source\TEST.cpp" />
     <ClCompile Include="..\Source\Util.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -174,6 +175,7 @@
     <ClInclude Include="..\Source\headers\externals\ini\inicpp.h" />
     <ClInclude Include="..\Source\headers\HashTable.h" />
     <ClInclude Include="..\Source\headers\Interpreter.h" />
+    <ClInclude Include="..\Source\headers\PythonFunctions.h" />
     <ClInclude Include="..\Source\headers\Signal.h" />
     <ClInclude Include="..\Source\headers\SM2K.h" />
     <ClInclude Include="..\Source\headers\Stream.h" />

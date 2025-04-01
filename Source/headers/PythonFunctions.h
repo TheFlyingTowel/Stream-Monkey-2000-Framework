@@ -1,11 +1,21 @@
-import sys
-sys.path.insert(0,"./yt-dlp")
+#pragma once
 
+namespace SM2K
+{
+	namespace PY
+	{
+		///Tags
+
+		TAG(Python);
+
+
+		namespace py = pybind11;
+		constexpr const cstring YT_EXTRACT = { R"(#Youtube video link extract
+import sys
+sys.path.insert(0,"./data/libs/yt-dlp")
 from yt_dlp.YoutubeDL import YoutubeDL
 
-
-
-def _run(source : str, m3u8 : bool):
+def extract(source : str, m3u8 : bool):
 	global sm2kWriteOut
 	youtube_dl :  YoutubeDL = YoutubeDL()
 	url_source = ()
@@ -41,9 +51,33 @@ def _run(source : str, m3u8 : bool):
 		url_source = grab_format(info['formats'])
 		url_source += (info['title'],info['duration'],)
 	return '\n'.join([str(x) for x in url_source])
+)" };
+
+
+		constexpr const cstring PYTHON_FUNCTIONS[1] = {
+			YT_EXTRACT,
+			//TODO: Add Python functions here ^^^
+		};
+
+		template<typename T>
+		inline constexpr const int funcSize(const T& x) { return sizeof(x) / 8; };
+		
+
+
+#define EXE_FUNC(_name, _returnType, ...) py::globals()[#_name](__VA_ARGS__).cast<_returnType>() // Runs a loaded Python function.
+#define EXTRACT_YT(_link, _useM3u8) EXE_FUNC(extract, string, _link, _useM3u8)
 
 
 
 
 
+#define TRY_EXTRACT_YT(_link, _useM3u8, _out) \
+		try{\
+			_out = py::globals()["extract"](_link, _useM3u8).cast<string>();\
+		}\
+		catch (const std::exception& e) {\
+		std::cerr << "Python error occurred: " << e.what() << std::endl;\
+		}\
 
+	}
+}

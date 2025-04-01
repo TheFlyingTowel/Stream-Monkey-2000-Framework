@@ -146,8 +146,7 @@ namespace SM2K
 
 
 	void Trim(string& _str, const string& _trim);
-
-
+	bool Contains(const string& _str, const string& _content);
 
 	string App_SysCmd(const vector(string)& _cmd);
 	s32 EXE_SysCmd(const string& _cmd);

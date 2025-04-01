@@ -31,7 +31,7 @@ namespace SM2K
 	namespace Core_layer
 	{
 
-		//using namespace AutoID_Literals;
+		
 
 
 
@@ -70,6 +70,8 @@ namespace SM2K
 
 			log.log.EnableConsoleLogging(GET(_EnableConsoleLogging, e).enableConsoleLog);
 
+			ADD(PY::Python, e); // Inits the python interpreter 
+			
 			sysPaths.hlsBaseDumpPath = config->at("Stream").at("hlsBaseDumpPath").as<string>();
 			sysPaths.streamInstanceDumpPath = config->at("Stream").at("instancePath").as<string>();
 			sysPaths.urlBase = config->at("Stream").at("baseUrl").as<string>();

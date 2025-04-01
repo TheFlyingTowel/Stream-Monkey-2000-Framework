@@ -4,6 +4,10 @@
 #define SM2K_EXPORTS
 #include "pch.h"
 
+
+
+
+
 namespace SM2K
 {
 
@@ -152,7 +156,6 @@ namespace SM2K
 };
 
 
-
 std::string format_string(const char* format, ...) {
 	// Buffer for the formatted string
 	char buffer[1024];
@@ -170,8 +173,6 @@ std::string format_string(const char* format, ...) {
 	// Return as a std::string
 	return std::string(buffer);
 }
-
-
 std::string print_timestamp(int64_t timestamp, AVStream* stream) {
 	// Convert the timestamp to seconds by scaling it with the stream's time base
 	//double seconds = av_rescale_q((int64_t)timestamp, stream->time_base, AVRational{ 1, AV_TIME_BASE });
@@ -180,8 +181,6 @@ std::string print_timestamp(int64_t timestamp, AVStream* stream) {
 	SM2K::u32 hr = std::floor(min / 60);
 	return format_string("%02u:%02u:%02u", hr, min, ((SM2K::u32)std::floor(seconds)) % 60);
 }
-
-
 void print_timestamp_(int64_t timestamp, AVStream* stream) {
 	// Convert the timestamp to seconds by scaling it with the stream's time base
 	//double seconds = av_rescale_q((int64_t)timestamp, stream->time_base, AVRational{ 1, AV_TIME_BASE });
@@ -193,8 +192,6 @@ void print_timestamp_(int64_t timestamp, AVStream* stream) {
 
 namespace py = pybind11;
 
-
-
 void ExtractYT(const std::string& _link, std::string& _out, int64_t& _endTime)
 {
 	using namespace SM2K;
@@ -202,50 +199,17 @@ void ExtractYT(const std::string& _link, std::string& _out, int64_t& _endTime)
 
 	string raw_src;
 
-	{
 
-		//auto pyMath = py::module::import("ffmpeg");
-		//auto resultObj = pyMath.attr("sqrt")(2); // py::eval("min(2, 5)");
-
-		//double result = resultObj.cast<double>();
-
-		py::initialize_interpreter(); // Initializes Python
-		try
-		{
-
-			py::module_ sys = py::module_::import("sys");
-			auto path = sys.attr("path").attr("append")("./data/libs/");
-			//	string yt_dlp_path = "./data/libs/yt-dlp";
-			//	py::module_ zipimport = py::module_::import("zipimport");
-
-				//auto yt_lib = zipimport.attr("zipimporter")(yt_dlp_path);
-				//auto yt_dlp = yt_lib.attr("load_module")("yt_dlp");
-			auto func = py::module_::import("extract");
-
-			auto extract = func.attr("_run");
-
-			raw_src = extract(_link, false).cast<string>();
-
-
-		}
-		catch (const std::exception& e) {
-			// Catch the exception and print the error details
-			std::cerr << "Python error occurred: " << e.what() << std::endl;
-		}
+	raw_src = EXTRACT_YT(_link, false);
 
 
 
-		py::finalize_interpreter();
-
-
-	}
 	vector(string) link = Split(raw_src, "\n");
 
 	_out = link[0];
-	_endTime = std::stoi(link[2]) * 1000;
+	_endTime = (_out.empty()) ? 0 : std::stoi(link[2]) * 1000;
 
 }
-
 int64_t calculate_end_pts(AVStream* stream) {
 	if (!stream || stream->duration == AV_NOPTS_VALUE) {
 		return -1; // Unable to calculate
@@ -259,7 +223,6 @@ int64_t calculate_end_pts(AVStream* stream) {
 
 	return end_pts;
 }
-
 double calculate_end_time_seconds(AVStream* stream) {
 	if (!stream || stream->duration == AV_NOPTS_VALUE) {
 		return -1.0; // Unable to calculate
@@ -288,15 +251,22 @@ double calculate_current_time_seconds(AVStream* stream, int64_t _current) {
 
 
 
-
 void RunTestYTStream(std::string _link = "https://www.youtube.com/watch?v=eT3yJzCXz4g")
 {
 
+	AVFormatContext* out_ctx = NULL;
+	int64_t last_dts = AV_NOPTS_VALUE; // Initialize to invalid value
+	int64_t last_pts = AV_NOPTS_VALUE;
 	using namespace SM2K;
 	using namespace Core_layer;
 
 	string link;
 	int64_t end;
+	string outFileName = "test";
+	string outPath = "./data/dump/Test/";
+	string outFile = outPath + outFileName + ".m3u8";
+	string outSeg = outPath + "segment%03d.ts";
+	
 	ExtractYT(_link, link, end);
 
 	avformat_network_init();
@@ -316,65 +286,53 @@ void RunTestYTStream(std::string _link = "https://www.youtube.com/watch?v=eT3yJz
 		return;
 	}
 
-	cstring outFile = "./data/dump/Test/test.m3u8";
 
 
 	// Output file (HLS)
-	AVFormatContext* out_ctx = NULL;
-	if (avformat_alloc_output_context2(&out_ctx, NULL, "hls", outFile) < 0) {
+	
+	if (avformat_alloc_output_context2(&out_ctx, NULL, "hls", (outFile + "_").c_str()) < 0) {
 		fprintf(stderr, "Could not allocate output context\n");
 		avformat_close_input(&in_ctx);
 		return;
 	}
+	
 
-	string startNum;
-	{
-		std::ifstream ifs(outFile);
-		if(ifs.is_open())
-		{
-			
-			string tmp;
-			while(!ifs.eof())
-			{
-				ifs >> tmp;
-				if (!tmp.empty()) startNum = tmp;
-			}
-		}
-		Trim(startNum, "test");
-		Trim(startNum, ".ts");
-	}
 
 	// Options (HLS)
 	AVDictionary* hls_opts = NULL;
 	av_dict_set(&hls_opts, "hls_time", "8", 0);
 	av_dict_set(&hls_opts, "hls_list_size", "4", 0);
-	av_dict_set(&hls_opts, "hls_list_type", "event", 0);
-	av_dict_set(&hls_opts, "hls_start_number", "200", 0);
-	//av_dict_set(&hls_opts, "hls_segment_filename", "segment%03d.ts", 0);
-	av_dict_set(&hls_opts, "hls_flags", "independent_segments +append_list +omit_endlist +discont_start +delete_segments", 0);
-	//av_dict_set(&hls_opts, "hls_flags", "independent_segments +omit_endlist +append_list +delete_segments", 0);
+	av_dict_set(&hls_opts, "hls_list_type", "live", 0);
+	//av_dict_set(&hls_opts, "hls_start_number", startNum.c_str(), 0);
+	av_dict_set(&hls_opts, "crf", "0", 0);
+	av_dict_set(&hls_opts, "hls_segment_filename", outSeg.c_str(), 0);
+	av_dict_set(&hls_opts, "hls_start_number_source", "generic", 0);
+	av_dict_set(&hls_opts, "hls_flags", "split_by_time", 0);
+	av_dict_set(&hls_opts, "hls_flags", "+discont_start +independent_segments +append_list +omit_endlist +delete_segments", 0);
+
 
 	for (int i = 0; i < in_ctx->nb_streams; i++) {
 		AVStream* in_stream = in_ctx->streams[i];
 		AVStream* out_stream = avformat_new_stream(out_ctx, NULL);
+		
 		avcodec_parameters_copy(out_stream->codecpar, in_stream->codecpar);
 	}
 
-	if (avio_open(&out_ctx->pb, outFile, AVIO_FLAG_WRITE) < 0) {
+	if (avio_open2(&out_ctx->pb, (outFile + "_").c_str(), AVIO_FLAG_WRITE, NULL, &hls_opts) < 0) {
 		fprintf(stderr, "Could not open output file\n");
 		avformat_close_input(&in_ctx);
 		avformat_free_context(out_ctx);
 		return;
 	}
 
-	if (avformat_write_header(out_ctx, &hls_opts) < 0) {
+	if (avformat_init_output(out_ctx, &hls_opts) < 0) {
 		fprintf(stderr, "Could not write HLS header\n");
 		avformat_close_input(&in_ctx);
 		avio_closep(&out_ctx->pb);
 		avformat_free_context(out_ctx);
 		return;
 	}
-	av_log_set_level(AV_LOG_DEBUG);
+	//av_log_set_level(AV_LOG_DEBUG);
 	// Start time for synchronization
 	int64_t start_time = av_gettime_relative();
 
@@ -383,8 +341,8 @@ void RunTestYTStream(std::string _link = "https://www.youtube.com/watch?v=eT3yJz
 	int frame = 0;
 
 	bool set = false;
+	
 	while (frame >= 0) {
-
 
 		frame = av_read_frame(in_ctx, &pkt);
 		if (frame < 0)
@@ -392,8 +350,13 @@ void RunTestYTStream(std::string _link = "https://www.youtube.com/watch?v=eT3yJz
 			while ((frame = av_read_frame(in_ctx, &pkt)) < 0)
 				if (lastPos >= end) break;
 		}
+		
+
+
 		AVStream* in_stream = in_ctx->streams[pkt.stream_index];
 		AVStream* out_stream = out_ctx->streams[pkt.stream_index];
+		
+		
 		// Convert PTS/DTS to real-time
 		int64_t pts_time = av_rescale_q(pkt.pts, in_stream->time_base, AVRational{ 1, AV_TIME_BASE });
 		int64_t now = av_gettime_relative() - start_time;
@@ -411,7 +374,22 @@ void RunTestYTStream(std::string _link = "https://www.youtube.com/watch?v=eT3yJz
 		if (pts_time > now) {
 			printf("\r");
 			av_usleep(pts_time - now);
+
+			if (std::filesystem::exists(((outFile + "_") + ".tmp").c_str()))
+			{
+			//	std::remove((outFile).c_str());
+				std::rename(((outFile + "_") + ".tmp").c_str(), (outFile).c_str());
+			}
 			print_timestamp_(pkt.pts, in_stream);
+		}
+
+
+		if (pkt.dts != AV_NOPTS_VALUE && pkt.dts <= last_dts) {
+			pkt.dts = last_dts + 1; // Ensure DTS is strictly increasing
+		}
+
+		if (pkt.pts != AV_NOPTS_VALUE && pkt.pts <= last_pts) {
+			pkt.pts = last_pts + 1; // Ensure PTS is strictly increasing
 		}
 
 		// Rescale timestamps
@@ -420,52 +398,37 @@ void RunTestYTStream(std::string _link = "https://www.youtube.com/watch?v=eT3yJz
 		pkt.duration = av_rescale_q(pkt.duration, in_stream->time_base, out_stream->time_base);
 		pkt.pos = -1;
 
+	
 		// Write packet to output
-		if (av_interleaved_write_frame(out_ctx, &pkt) < 0) {
+		if (av_write_frame(out_ctx, &pkt) < 0) {
 			printf("Error writing packet\n");
 			if (frame < 0) break;
 		}
-		else
-		{
-			string tmp = outFile, in, lastIn;
-			std::ifstream inStream(tmp + ".tmp");
-			std::ofstream outStream(tmp);
-			while (!inStream.eof() && inStream.is_open())
-			{
-				inStream >> in;
-				if (in != lastIn)
-				{
-					outStream << in + '\n';
-					lastIn = in;
-				}
-			}
-			inStream.close();
-			outStream.close();
-		}
+		
 		if (lastPos >= end)
 		{
+
+			// Update the tracking values
+			last_dts = pkt.dts;
+			last_pts = pkt.pts;
 			av_packet_unref(&pkt);
+			
 			break;
 		}
-		av_packet_unref(&pkt);
 
+		av_packet_unref(&pkt);
+		avio_flush(out_ctx->pb);
 	}
 
-
-	av_packet_unref(&pkt);
 	av_write_trailer(out_ctx);
-
 	// Flush and close the I/O context
 	avio_flush(out_ctx->pb);
-
-	//av_usleep(500000); // Sleep for 0.5 seconds
-
 	avformat_close_input(&in_ctx);
 
 
-	avio_closep(&out_ctx->pb);
+	//avio_closep(&out_ctx->pb);
 	av_dict_free(&hls_opts);
-	avformat_free_context(out_ctx);
+	//avformat_free_context(out_ctx);
 	avformat_network_deinit();
 
 }
@@ -480,16 +443,19 @@ int main(int argsc, char** args) // For Testing
 	_CrtSetBreakAlloc(-1);
 #endif // DEBUG_MEM_LEAK
 
-	// "D:\\Users\\Towel\\Documents\\Firefox.mp4"
-	
+	//"D:\\Users\\Towel\\Documents\\Firefox.mp4"
 
-	vector(string) links { "https://www.youtube.com/watch?v=eT3yJzCXz4g","https://www.youtube.com/watch?v=HD9I4L5klGo", "https://www.youtube.com/watch?v=u9o1OYX5UOQ" };
+
+	sm2k test = nullptr;
+	AllocateNewInstance(test, true);
+	vector(string) links {"https://www.youtube.com/watch?v=eT3yJzCXz4g","https://www.youtube.com/watch?v=HD9I4L5klGo", "https://www.youtube.com/watch?v=u9o1OYX5UOQ" };
 
 	for(auto& link : links)
 		RunTestYTStream(link);
 
+	FreeRegistry(test);
 
-	/*sm2k test = nullptr;
+	/*
 	sm2k test2 = nullptr;
 	sm2k test3 = nullptr;
 	sm2k test4 = nullptr;
@@ -524,7 +490,6 @@ int main(int argsc, char** args) // For Testing
 
 	return 0;
 }
-
 
 
 	/*std::vector<cstring> names = {
@@ -603,3 +568,14 @@ int main(int argsc, char** args) // For Testing
 	//std::cout << "0x" << std::hex << (HashingFunctions::DefaultHash("echo")) << "\n";
 	//std::cout << "0x" << std::hex << (HashingFunctions::DefaultHash("still")) << "\n";
 	//std::cout << "0x" << std::hex << (HashingFunctions::DefaultHash("strain")) << "\n";
+
+
+
+
+
+
+		//auto pyMath = py::module::import("ffmpeg");
+		//auto resultObj = pyMath.attr("sqrt")(2); // py::eval("min(2, 5)");
+		//double result = resultObj.cast<double>();
+		//py::initialize_interpreter(); // Initializes Python
+		//py::finalize_interpreter();

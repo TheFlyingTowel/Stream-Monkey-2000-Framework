@@ -66,6 +66,12 @@
     <ClCompile Include="..\Source\BitStream.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\Source\Python.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\TEST.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Source\headers\BaseCmd.h">
@@ -123,6 +129,9 @@
       <Filter>Header Files\out_header</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\headers\BitStream.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\headers\PythonFunctions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

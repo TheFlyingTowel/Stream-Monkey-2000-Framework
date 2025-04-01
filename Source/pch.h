@@ -29,7 +29,7 @@
 
 
 #ifndef PATH_TO_CORE_PYTHON_LIBS
-#define PATH_TO_CORE_PYTHON_LIBS "C:\\Users\\Towel\\AppData\\Local\\Programs\\Python\\Python313\\libs\\"
+#define PATH_TO_CORE_PYTHON_LIBS "C:\\Python313\\libs\\"
 #endif // !PATH_TO_CORE_PYTHON_LIBS
 
 
@@ -51,7 +51,8 @@
 #include <sstream>
 #include <iomanip>
 #include <unordered_map>
-#include <stdio.h>
+#include <cstdio>
+//#include <stdio.h>
 #include <pybind11/embed.h>
 
 extern "C" {
@@ -82,3 +83,4 @@ extern "C" {
 #include "headers/Exception.h"
 #include "headers/Signal.h"
 #include "headers/BitStream.h"
+#include "headers/PythonFunctions.h"
