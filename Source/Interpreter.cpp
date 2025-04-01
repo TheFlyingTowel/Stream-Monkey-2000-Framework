@@ -44,27 +44,37 @@ namespace SM2K
 			for(int j = 0; j < cmd.size(); ++j)
 			{
 				word = cmd[j].c_str();
-
-				if (s_cmdTable.contains(word))
+				bool op;
+				if (s_cmdTable.contains(word) || ( op = (word[0] == '"' || word[0] == '\'')))
 				{
-					m_TokenizedData.emplace_back(s_cmdTable[word]);
+					// Find out if this is a string
+					(op) ? m_TokenizedData.emplace_back(Token(STR_OPEN, string( word[0], '\0' ).c_str())) : m_TokenizedData.emplace_back(s_cmdTable[word]);
 					switch (m_TokenizedData.back().type)
 					{
 						case OP: // Format string data
 						{
 							currStrOp = m_TokenizedData.back().data[0];
-							
+							if (cmd[j].length() < 2) continue;
 							switch (currStrOp)
 							{
 							case '\"':
 							case '\'':
 							{
-								m_TokenizedData.back().type = STR_OPEN;
-								word = cmd[++j].c_str();
 								string str = "";
-								while (*word != currStrOp) str += word;
+								int n = 1;
+								while (word[n] != currStrOp)
+								{
+									str += word[n++];
+									if (cmd[j].length() <= n)
+									{
+										word = cmd[++j].c_str();
+										str += " ";
+										n = 0;
+									}
+								}
 								m_TokenizedData.emplace_back(Token(STRING, str.c_str()));
-								m_TokenizedData.back().type = STR_CLOSE;
+								m_TokenizedData.emplace_back(Token(STR_CLOSE, string(currStrOp, '\0').c_str())); // Add closing string token
+
 							}
 							break;
 							}
