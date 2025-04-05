@@ -364,3 +364,5 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+Stream Monkey 2000 Framework/data/dump/Test/test.m3u8
+Stream Monkey 2000 Framework/data/libs/yt-dlp
