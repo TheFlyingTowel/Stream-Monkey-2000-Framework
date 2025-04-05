@@ -251,6 +251,145 @@ double calculate_current_time_seconds(AVStream* stream, int64_t _current) {
 
 
 
+void RunTestYTStreamTEST(std::string _link = "https://www.youtube.com/watch?v=eT3yJzCXz4g")
+{
+	AVFormatContext* out_ctx = NULL;
+	int64_t last_dts = AV_NOPTS_VALUE;
+	int64_t last_pts = AV_NOPTS_VALUE;
+	using namespace SM2K;
+	using namespace Core_layer;
+
+	string link;
+	int64_t end;
+	string outFileName = "test";
+	string outPath = "./data/dump/Test/";
+	string outFile = outPath + outFileName + ".m3u8";
+	string outSeg = outPath + "segment%03d.ts";
+	string tmpOutFile = outFile + ".tmp";
+
+	ExtractYT(_link, link, end);
+	avformat_network_init();
+
+	// Input
+	AVFormatContext* in_ctx = nullptr;
+	if (avformat_open_input(&in_ctx, link.c_str(), nullptr, nullptr)) {
+		fprintf(stderr, "Could not open file");
+		return;
+	}
+
+	if (avformat_find_stream_info(in_ctx, nullptr) < 0) {
+		fprintf(stderr, "Could not find stream info\n");
+		avformat_close_input(&in_ctx);
+		return;
+	}
+
+	// Output file (HLS)
+	if (avformat_alloc_output_context2(&out_ctx, NULL, "hls", outFile.c_str()) < 0) {
+		fprintf(stderr, "Could not allocate output context\n");
+		avformat_close_input(&in_ctx);
+		return;
+	}
+
+	AVDictionary* hls_opts = NULL;
+	av_dict_set(&hls_opts, "hls_time", "2", 0);
+	av_dict_set(&hls_opts, "hls_list_size", "2", 0);
+	av_dict_set(&hls_opts, "hls_list_type", "live", 0);
+	av_dict_set(&hls_opts, "crf", "0", 0);
+	av_dict_set(&hls_opts, "hls_segment_filename", outSeg.c_str(), 0);
+	av_dict_set(&hls_opts, "hls_flags", "+discont_start+independent_segments+append_list+omit_endlist+delete_segments+temp_file", 0);
+
+	for (int i = 0; i < in_ctx->nb_streams; i++) {
+		AVStream* in_stream = in_ctx->streams[i];
+		AVStream* out_stream = avformat_new_stream(out_ctx, NULL);
+		avcodec_parameters_copy(out_stream->codecpar, in_stream->codecpar);
+	}
+
+	if (avformat_write_header(out_ctx, &hls_opts) < 0) {
+		fprintf(stderr, "Could not write HLS header\n");
+		avformat_close_input(&in_ctx);
+		avformat_free_context(out_ctx);
+		return;
+	}
+
+	int64_t start_time = av_gettime_relative();
+	AVPacket pkt;
+	int64_t lastPos = 0;
+	int frame = 0;
+	bool set = false;
+
+	while (frame >= 0) {
+		frame = av_read_frame(in_ctx, &pkt);
+		if (frame < 0) {
+			while ((frame = av_read_frame(in_ctx, &pkt)) < 0)
+				if (lastPos >= end) break;
+		}
+
+		AVStream* in_stream = in_ctx->streams[pkt.stream_index];
+		AVStream* out_stream = out_ctx->streams[pkt.stream_index];
+		int64_t pts_time = av_rescale_q(pkt.pts, in_stream->time_base, AVRational{ 1, AV_TIME_BASE });
+		int64_t now = av_gettime_relative() - start_time;
+
+		if (!set) {
+			end = calculate_end_time_seconds(in_stream);
+			set = true;
+		}
+
+		if (pkt.pts >= 0) lastPos = calculate_current_time_seconds(in_stream, pkt.pts);
+		av_rescale_q(end, in_stream->time_base, AVRational{ 1, AV_TIME_BASE });
+
+		if (pts_time > now) {
+			printf("\r");
+			av_usleep(pts_time - now);
+			print_timestamp_(pkt.pts, in_stream);
+		}
+
+		if (pkt.dts != AV_NOPTS_VALUE && pkt.dts <= last_dts) {
+			pkt.dts = last_dts + 1;
+		}
+		if (pkt.pts != AV_NOPTS_VALUE && pkt.pts <= last_pts) {
+			pkt.pts = last_pts + 1;
+		}
+
+		pkt.pts = av_rescale_q_rnd(pkt.pts, in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF);
+		pkt.dts = av_rescale_q_rnd(pkt.dts, in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF);
+		pkt.duration = av_rescale_q(pkt.duration, in_stream->time_base, out_stream->time_base);
+		pkt.pos = -1;
+
+		if (av_write_frame(out_ctx, &pkt) < 0) {
+			printf("Error writing packet\n");
+			if (frame < 0) break;
+		}
+
+	
+
+		// Workaround for .m3u8.tmp not renamed if reader is locking .m3u8
+		std::string tmpFile = outFile + ".tmp";
+		std::ifstream src(tmpFile, std::ios::binary);
+		std::ofstream dst(outFile, std::ios::binary);
+		if (src && dst) {
+			dst << src.rdbuf();
+			src.close();
+			dst.close();
+		}
+
+		if (lastPos >= end) {
+			last_dts = pkt.dts;
+			last_pts = pkt.pts;
+			av_packet_unref(&pkt);
+			break;
+		}
+	}
+
+	av_write_trailer(out_ctx);
+	avio_flush(out_ctx->pb);
+	avformat_close_input(&in_ctx);
+	av_dict_free(&hls_opts);
+	avformat_free_context(out_ctx);
+	avformat_network_deinit();
+}
+
+
+
 void RunTestYTStream(std::string _link = "https://www.youtube.com/watch?v=eT3yJzCXz4g")
 {
 
@@ -265,7 +404,7 @@ void RunTestYTStream(std::string _link = "https://www.youtube.com/watch?v=eT3yJz
 	string outFileName = "test";
 	string outPath = "./data/dump/Test/";
 	string outFile = outPath + outFileName + ".m3u8";
-	string outSeg = outPath + "segment%03d.ts";
+	string outSeg = outPath + outFileName + "_%03d.ts";
 	
 	ExtractYT(_link, link, end);
 
@@ -290,7 +429,7 @@ void RunTestYTStream(std::string _link = "https://www.youtube.com/watch?v=eT3yJz
 
 	// Output file (HLS)
 	
-	if (avformat_alloc_output_context2(&out_ctx, NULL, "hls", (outFile + "_").c_str()) < 0) {
+	if (avformat_alloc_output_context2(&out_ctx, NULL, "hls", outFile.c_str()) < 0) {
 		fprintf(stderr, "Could not allocate output context\n");
 		avformat_close_input(&in_ctx);
 		return;
@@ -300,16 +439,16 @@ void RunTestYTStream(std::string _link = "https://www.youtube.com/watch?v=eT3yJz
 
 	// Options (HLS)
 	AVDictionary* hls_opts = NULL;
-	av_dict_set(&hls_opts, "hls_time", "8", 0);
-	av_dict_set(&hls_opts, "hls_list_size", "4", 0);
+	av_dict_set(&hls_opts, "hls_time", "2", 0);
+	av_dict_set(&hls_opts, "hls_list_size", "2", 0);
 	av_dict_set(&hls_opts, "hls_list_type", "live", 0);
 	//av_dict_set(&hls_opts, "hls_start_number", startNum.c_str(), 0);
 	av_dict_set(&hls_opts, "crf", "0", 0);
 	av_dict_set(&hls_opts, "hls_segment_filename", outSeg.c_str(), 0);
 	av_dict_set(&hls_opts, "hls_start_number_source", "generic", 0);
 	av_dict_set(&hls_opts, "hls_flags", "split_by_time", 0);
-	av_dict_set(&hls_opts, "hls_flags", "+discont_start +independent_segments +append_list +omit_endlist +delete_segments", 0);
-
+	av_dict_set(&hls_opts, "hls_flags", "+discont_start+independent_segments+append_list+omit_endlist+delete_segments", 0);
+	//av_dict_set(&hls_opts, "method", "PUT", 0); // <- forces direct file writing, no tmp
 
 	for (int i = 0; i < in_ctx->nb_streams; i++) {
 		AVStream* in_stream = in_ctx->streams[i];
@@ -318,20 +457,13 @@ void RunTestYTStream(std::string _link = "https://www.youtube.com/watch?v=eT3yJz
 		avcodec_parameters_copy(out_stream->codecpar, in_stream->codecpar);
 	}
 
-	if (avio_open2(&out_ctx->pb, (outFile + "_").c_str(), AVIO_FLAG_WRITE, NULL, &hls_opts) < 0) {
-		fprintf(stderr, "Could not open output file\n");
-		avformat_close_input(&in_ctx);
-		avformat_free_context(out_ctx);
+
+	if (avformat_write_header(out_ctx, &hls_opts) < 0) {
+		fprintf(stderr, "Could not write header\n");
 		return;
 	}
 
-	if (avformat_init_output(out_ctx, &hls_opts) < 0) {
-		fprintf(stderr, "Could not write HLS header\n");
-		avformat_close_input(&in_ctx);
-		avio_closep(&out_ctx->pb);
-		avformat_free_context(out_ctx);
-		return;
-	}
+
 	//av_log_set_level(AV_LOG_DEBUG);
 	// Start time for synchronization
 	int64_t start_time = av_gettime_relative();
@@ -375,11 +507,6 @@ void RunTestYTStream(std::string _link = "https://www.youtube.com/watch?v=eT3yJz
 			printf("\r");
 			av_usleep(pts_time - now);
 
-			if (std::filesystem::exists(((outFile + "_") + ".tmp").c_str()))
-			{
-			//	std::remove((outFile).c_str());
-				std::rename(((outFile + "_") + ".tmp").c_str(), (outFile).c_str());
-			}
 			print_timestamp_(pkt.pts, in_stream);
 		}
 
@@ -404,7 +531,8 @@ void RunTestYTStream(std::string _link = "https://www.youtube.com/watch?v=eT3yJz
 			printf("Error writing packet\n");
 			if (frame < 0) break;
 		}
-		
+
+
 		if (lastPos >= end)
 		{
 
@@ -416,19 +544,19 @@ void RunTestYTStream(std::string _link = "https://www.youtube.com/watch?v=eT3yJz
 			break;
 		}
 
-		av_packet_unref(&pkt);
-		avio_flush(out_ctx->pb);
+
+		
 	}
 
 	av_write_trailer(out_ctx);
 	// Flush and close the I/O context
-	avio_flush(out_ctx->pb);
+	//avio_flush(out_ctx->pb);
 	avformat_close_input(&in_ctx);
 
 
 	//avio_closep(&out_ctx->pb);
 	av_dict_free(&hls_opts);
-	//avformat_free_context(out_ctx);
+	avformat_free_context(out_ctx);
 	avformat_network_deinit();
 
 }
