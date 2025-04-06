@@ -187,7 +187,7 @@ void print_timestamp_(int64_t timestamp, AVStream* stream) {
 	double seconds = ((double)timestamp * stream->time_base.num / stream->time_base.den);
 	SM2K::u32 min = (SM2K::u32)std::floor(seconds / 60.0);
 	SM2K::u32 hr = std::floor(min / 60);
-	printf("%02u:%02u:%02u", hr, min, ((SM2K::u32)std::floor(seconds)) % 60);
+	printf("<%02u:%02u:%02u>", hr, min, ((SM2K::u32)std::floor(seconds)) % 60);
 }
 
 namespace py = pybind11;
@@ -389,7 +389,7 @@ void RunTestYTStreamTEST(std::string _link = "https://www.youtube.com/watch?v=eT
 }
 
 
-
+#include <conio.h>
 void RunTestYTStream(std::string _link = "https://www.youtube.com/watch?v=eT3yJzCXz4g")
 {
 
@@ -476,6 +476,16 @@ void RunTestYTStream(std::string _link = "https://www.youtube.com/watch?v=eT3yJz
 	
 	while (frame >= 0) {
 
+		if (_kbhit())
+		{
+			_getch();
+			av_packet_unref(&pkt);
+			std::cout << "\n\n>Debug Blocking...                                                      \r\033[F\033[F";
+			av_usleep(500000); // 500ms pause
+			continue;
+		}
+
+
 		frame = av_read_frame(in_ctx, &pkt);
 		if (frame < 0)
 		{
@@ -508,8 +518,11 @@ void RunTestYTStream(std::string _link = "https://www.youtube.com/watch?v=eT3yJz
 			av_usleep(pts_time - now);
 
 			print_timestamp_(pkt.pts, in_stream);
+			printf("\n\033[F");
 		}
 
+
+		
 
 		if (pkt.dts != AV_NOPTS_VALUE && pkt.dts <= last_dts) {
 			pkt.dts = last_dts + 1; // Ensure DTS is strictly increasing

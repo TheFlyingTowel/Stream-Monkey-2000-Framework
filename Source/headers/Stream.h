@@ -51,6 +51,11 @@ namespace SM2K
 	{
 	public:
 
+		struct SharedRequest
+		{
+			Hash request;
+			size_t size;
+		};
 
 		Stream(const ProcessID & _id)
 			:BaseProcess(_id)
@@ -132,39 +137,81 @@ namespace SM2K
 			_Registry& _registry = *registry;
 
 			//TODO: Find a way to implement direct stream controls with the "libavformat" lib.
-
+			
 			if (cmdBuffer)
 			{
-				u64 state = (cmdBuffer & (1 << GetEarilestSetBitIndex64(cmdBuffer)));
-
-				switch (state)
+				if (cmdBuffer & (1 << 56))
 				{
-				case SKP_FW:
-					break;
+					cmdBuffer &= ~(1 << 56); // trun off shared flag since we're in the branch
+					while (cmdBuffer)
+					{
+						int index = GetEarilestSetBitIndex64(cmdBuffer); // Grab the command bit index
+						u64 state = (1ui64 << index); // Get state from index
 
-				case SKP_BK:
-					break;
-					
-				case REPLAY:
-					break;
-					
-				case PAUSE_:
-					break;
-					
-				case PLAY__:
-					break;
-					
-				case STOP__:
-					break;
-					
-				case RESET_:
-					break;
-					
-				default:
-					break;
+						switch (state)
+						{
+						case SKP_FW:
+							break;
+
+						case SKP_BK:
+							break;
+
+						case REPLAY:
+							break;
+
+						case PAUSE_:
+							break;
+
+						case PLAY__:
+							break;
+
+						case STOP__:
+							break;
+
+						case RESET_:
+							break;
+
+						default:
+							break;
+						}
+
+						cmdBuffer &= ~(state | (0xff << (504 - index * 8))); // Clear command from the buffer.
+					}
 				}
+				else
+				{
+					u64 state = (1ui64 << GetEarilestSetBitIndex64(cmdBuffer));
 
+					switch (state)
+					{
+					case SKP_FW:
+						break;
 
+					case SKP_BK:
+						break;
+
+					case REPLAY:
+						break;
+
+					case PAUSE_:
+						break;
+
+					case PLAY__:
+						break;
+
+					case STOP__:
+						break;
+
+					case RESET_:
+						break;
+
+					default:
+						break;
+					}
+
+					cmdBuffer = 0x0; // Clear the buffer
+
+				}
 			}
 
 
@@ -183,6 +230,74 @@ namespace SM2K
 			succeed();
 		}
 
+		struct tst
+		{
+			Hash request;
+			size_t size;
+		};
+
+		inline void send_shared(vector(SharedRequest)& _requests)
+		{
+			u64 buffer = 0x100000000000000;
+			for (auto& [request, size] : _requests)
+			{
+
+				switch (request)
+				{
+				case TOKEN(SkipFW):
+				{
+					buffer |= SKP_FW;
+												  
+					buffer |= ((size & 0xFF) << 48);
+				}
+				break;
+
+				case TOKEN(SkipBW):
+				{
+					buffer |= SKP_BK;
+					buffer |= ((size & 0xFF) << 40);
+				}
+				break;
+
+				case TOKEN(Replay):
+				{
+					buffer |= REPLAY;
+					buffer |= ((size & 0xFF) << 32);
+				}
+				break;
+
+				case TOKEN(Pause):
+				{
+					buffer |= PAUSE_;
+					buffer |= ((size & 0xFF) << 24);
+				}
+				break;
+
+				case TOKEN(Play):
+				{
+					buffer |= PAUSE_;
+					buffer |= ((size & 0xFF) << 16);
+				}
+				break;
+
+				case TOKEN(Stop):
+				{
+					buffer |= STOP__;
+				}
+				break;
+
+				case TOKEN(Reset):
+				{
+					buffer |= RESET_;
+				}
+				break;
+
+				default:
+					break;
+				}
+			}
+			(buffer == 0x100000000000000) ? cmdBuffer : cmdBuffer = buffer;
+		}
 		inline void send(Hash _request, size_t _size) 
 		{
 			switch (_request)
@@ -225,14 +340,12 @@ namespace SM2K
 				case TOKEN(Stop):
 				{
 					cmdBuffer |= STOP__;
-					cmdBuffer |= ((_size << 8) & 0xFFFFFF00);
 				}
 				break;
 				
-				case TOKEN(Rest):
+				case TOKEN(Reset):
 				{
 					cmdBuffer |= RESET_;
-					cmdBuffer |= ((_size << 8) & 0xFFFFFF00);
 				}
 				break;
 				

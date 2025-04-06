@@ -57,6 +57,7 @@
 
 extern "C" {
 // Added FFMPEG libs
+#include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/time.h>
 }
