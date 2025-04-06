@@ -73,7 +73,7 @@ namespace SM2K
 
 					if (task.process && task.process->alive())
 						task.process->tick(&_registry, task.data);
-					else if(task.process->finished() || task.process->rejected())task.process = nullptr; // Move on if the process stopped.
+					else if(task.process->finished() || task.process->rejected())task.process = nullptr; // Move on if the process has stopped.
 
 				}
 				});
@@ -202,6 +202,10 @@ namespace SM2K
 			return static_cast<_Type*>(&*(processes.find(_name)->second));
 		}
 
+		inline virtual const _Type*  operator[](const string& _name)
+		{
+			return GetProcess(_name);
+		};
 		inline virtual bool IsRegistryEmpty()
 		{
 			return !scheduler.empty();

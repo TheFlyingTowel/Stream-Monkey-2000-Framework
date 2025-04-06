@@ -32,7 +32,33 @@ namespace SM2K
 
 	u64 GetEarilestSetBitIndex64(const u64& buffer)
 	{
+#ifdef _WIN32
 		return 63 - __lzcnt64(buffer);
+#else
+		return __builtin_ctz(buffer);
+#endif // _WIN32
+	}
+	u64 _GetEarilestSetBitIndex64(const u64& _buffer)
+	{
+		u64 buffer = _buffer;
+		buffer |= buffer >> 1;
+		buffer |= buffer >> 2;
+		buffer |= buffer >> 4;
+		buffer |= buffer >> 8;
+		buffer |= buffer >> 16;
+		buffer |= buffer >> 32;
+
+
+		buffer -= buffer >> 1 & 0x5555555555555555;
+		buffer = (buffer >> 2 & 0x3333333333333333) + (buffer & 0x3333333333333333);
+		buffer = (buffer >> 4) + buffer & 0x0F0F0F0F0F0F0F0F;
+
+		buffer += buffer >> 8;
+		buffer += buffer >> 16;
+		buffer += buffer >> 32;
+
+
+		return (buffer & 0x000000000000003F) - 1;
 	}
     vector(string) Split(string str, const u64& ndx)
     {

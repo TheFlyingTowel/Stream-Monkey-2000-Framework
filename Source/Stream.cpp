@@ -49,7 +49,10 @@ namespace SM2K
 	}
 	void run_SkipBackStream(_Registry& REGISTRY, _Entity e)
 	{
-		auto& backCount = GET(SkipBackStream, e).skipBackCount;
+		auto& req = GET(SkipBackStream, e);
+		auto& streamRegistry = GET(StreamRegistry, e);
+		auto& stream = *streamRegistry[req.name];
+
 		//DELETE(SkipBackStream, e);
 	}
 	

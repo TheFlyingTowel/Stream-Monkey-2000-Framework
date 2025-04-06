@@ -1,6 +1,12 @@
 #pragma once
 
-
+#define SKP_FW 0x8000000000000000
+#define SKP_BK 0x4000000000000000
+#define REPLAY 0x2000000000000000
+#define PAUSE_ 0x1000000000000000
+#define RESET_ 0x800000000000000
+#define STOP__ 0x400000000000000
+#define PLAY__ 0x200000000000000
 
 namespace SM2K
 {
@@ -124,20 +130,115 @@ namespace SM2K
 		{
 
 			_Registry& _registry = *registry;
-			//TODO: Add hls frame prossecing and time logic.
-			ADD(FilePath, id).path = "./data/testCompression.txt";
-			ADD(ShowCompressConfig, id).name = "Test";
-			auto& com = ADD(_Compression, id, _registry, id);
 
-			string read = "~";
-			//com.CompressByLine({ "Padding","Teast0","test2","test3","test11","test100" });
-			com.ReadByLine(read);
-			std::cout << read << std::endl;
 
-			com.End();
+			if (cmdBuffer)
+			{
+				u64 state = (cmdBuffer & (1 << GetEarilestSetBitIndex64(cmdBuffer)));
+
+				switch (state)
+				{
+				case SKP_FW:
+					break;
+
+				case SKP_BK:
+					break;
+					
+				case REPLAY:
+					break;
+					
+				case PAUSE_:
+					break;
+					
+				case PLAY__:
+					break;
+					
+				case STOP__:
+					break;
+					
+				case RESET_:
+					break;
+					
+				default:
+					break;
+				}
+
+
+			}
+
+
+			////TODO: Add hls frame prossecing and time logic.
+			//ADD(FilePath, id).path = "./data/testCompression.txt";
+			//ADD(ShowCompressConfig, id).name = "Test";
+			//auto& com = ADD(_Compression, id, _registry, id);
+
+			//string read = "~";
+			////com.CompressByLine({ "Padding","Teast0","test2","test3","test11","test100" });
+			//com.ReadByLine(read);
+			//std::cout << read << std::endl;
+
+			//com.End();
 
 			succeed();
 		}
+
+		inline void send(Hash _request, size_t _size) 
+		{
+			switch (_request)
+			{
+				case TOKEN(SkipFW):
+				{
+					cmdBuffer |= SKP_FW;
+					cmdBuffer |= ((_size << 8) & 0xFFFFFF00);
+				}
+				break;
+
+				case TOKEN(SkipBW):
+				{
+					cmdBuffer |= SKP_BK;
+					cmdBuffer |= ((_size << 8) & 0xFFFFFF00);
+				}
+				break;
+
+				case TOKEN(Replay):
+				{
+					cmdBuffer |= REPLAY;
+					cmdBuffer |= ((_size << 8) & 0xFFFFFF00);
+				}
+				break;
+
+				case TOKEN(Pause):
+				{
+					cmdBuffer |= PAUSE_;
+					cmdBuffer |= ((_size << 8) & 0xFFFFFF00);
+				}
+				break;
+
+				case TOKEN(Play):
+				{
+					cmdBuffer |= PAUSE_;
+					cmdBuffer |= ((_size << 8) & 0xFFFFFF00);
+				}
+				break;
+				
+				case TOKEN(Stop):
+				{
+					cmdBuffer |= STOP__;
+					cmdBuffer |= ((_size << 8) & 0xFFFFFF00);
+				}
+				break;
+				
+				case TOKEN(Rest):
+				{
+					cmdBuffer |= RESET_;
+					cmdBuffer |= ((_size << 8) & 0xFFFFFF00);
+				}
+				break;
+				
+				default:
+				break;
+			}
+		};
 
 		bool IsConfigured() const { return isConfigured; }
 
@@ -145,7 +246,7 @@ namespace SM2K
 		bool isConfigured = false;
 		_Registry* registryRef = nullptr;
 		GW::SYSTEM::GLog streamLog;
-
+		u64 cmdBuffer = 0x0;
 
 		LINK(StreamRegistry);
 

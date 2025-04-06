@@ -3,6 +3,7 @@
 namespace SM2K 
 {
 	u64 GetEarilestSetBitIndex64(const u64& _buffer);
+	u64 _GetEarilestSetBitIndex64(const u64& _buffer);
 	vector(string) Split(string _string, const u64& _count);
 	vector(string) Split(string _string, const string delimiter);
 	string PtrToString(void* _ptr);
