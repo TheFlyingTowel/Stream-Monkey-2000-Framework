@@ -131,6 +131,7 @@ namespace SM2K
 
 			_Registry& _registry = *registry;
 
+			//TODO: Find a way to implement direct stream controls with the "libavformat" lib.
 
 			if (cmdBuffer)
 			{
